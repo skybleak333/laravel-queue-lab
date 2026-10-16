@@ -1,9 +1,13 @@
 # laravel-queue-lab
 
-Reproducible experiments with Laravel queue workers against a real message broker. Each experiment is a PHPUnit test that starts real workers, records what they do and checks the result, so you can rerun it on your own versions.
+[![experiments](https://github.com/skybleak333/laravel-queue-lab/actions/workflows/experiments.yml/badge.svg)](https://github.com/skybleak333/laravel-queue-lab/actions/workflows/experiments.yml)
 
-- [Experiment 1: a job that outlives RabbitMQ's acknowledgement timeout](#experiment-1-a-job-that-outlives-rabbitmqs-acknowledgement-timeout)
-- [Experiment 2: a broker that stops answering](#experiment-2-a-broker-that-stops-answering)
+Reproducible experiments with Laravel queue workers against a real message broker. Each experiment is a PHPUnit test that starts real workers, records what they do and checks the result, so you can rerun it on your own versions. CI reruns them every week.
+
+What the experiments found, with `queue:work` and `rabbitmq:consume` from [vyuldashev/laravel-queue-rabbitmq](https://github.com/vyuldashev/laravel-queue-rabbitmq):
+
+- **[A job outlives RabbitMQ's acknowledgement timeout.](#experiment-1-a-job-that-outlives-rabbitmqs-acknowledgement-timeout)** The workers don't hang: they exit with code 0, and the job runs twice. With `rabbitmq:consume` and the default prefetch, the jobs already in the client buffer run twice too.
+- **[The broker stops answering.](#experiment-2-a-broker-that-stops-answering)** With the default timeouts, `queue:work` waits until the broker is back, even with heartbeats on, and `--timeout` doesn't help. `rabbitmq:consume` doesn't notice at all.
 
 ## Experiment 1: a job that outlives RabbitMQ's acknowledgement timeout
 
@@ -25,6 +29,8 @@ RabbitMQ closes a channel with `PRECONDITION_FAILED` (406) when a delivery stays
 | `queue:work` | The next `pop()` gets the 406 and the one after it `Lost connection: Channel connection is closed.` The worker stops with reason `LostConnection` 4 s later | 0 | A |
 | `rabbitmq:consume` | B and C, already in the client buffer, run on the closed channel. Then the 406 arrives from `wait()`, the consume loop ends and the process exits without `WorkerStopping` | 0 | A, B and C |
 | `rabbitmq:consume --prefetch-count=1` | The 406 arrives from `wait()` and the process exits | 0 | A |
+
+<img src="docs/ack-timeout.png" alt="Timeline of one run: job A finishes after the broker has closed the channel, then the workers exit and the jobs are delivered again" width="480">
 
 Nothing hangs. The cost is duplicate work: the ack sent when A finishes goes to a channel the broker has already closed, so A runs again. With the default prefetch, B and C run twice as well.
 
@@ -71,6 +77,8 @@ Times are seconds after the broker froze. After the broker is back, the test wat
 | `rabbitmq:consume --max-time=60` | `WorkerStopping` with `MaxTimeExceeded` at 58 s, but the process doesn't exit | Exits at once, exit code 0 |
 | `rabbitmq:consume --max-time=60`, `channel_rpc_timeout` 10 s | `MaxTimeExceeded` at 58 s. 13 s later, `AMQPHeartbeatMissedException` while closing the connection, exit code 1 | — |
 
+<img src="docs/frozen-broker.png" alt="Timeline of one run: five of seven workers are still waiting or running when the broker comes back after 100 seconds" width="480">
+
 Heartbeats alone don't help, and neither does the timeout alone: `queue:work` notices the frozen broker only with both. `rabbitmq:consume` doesn't notice it even then.
 
 ### Why
@@ -98,7 +106,7 @@ What that means for the workers:
 ### Limits
 
 - One kind of failure: a broker that stops answering behind an open TCP connection. Not covered: a suspended VM or a network that drops packets, where nothing acknowledges what the client sends. With unacknowledged data in flight, Linux gives up on such a connection after about 15 minutes by default ([`tcp_retries2`](https://docs.kernel.org/networking/ip-sysctl.html)); this isn't tested here. Also not covered: a broker that closes the connection. php-amqplib has an open report about missed heartbeats when the network is cut: [php-amqplib#1227](https://github.com/php-amqplib/php-amqplib/issues/1227).
-- The seconds come from local runs with PHP 8.4. The test checks what happens in each scenario, not the exact times.
+- The seconds come from local runs with PHP 8.4. The test checks what happens in each scenario, not the exact times. The charts are drawn from the event logs of one local run: the logs are in [`docs/data`](docs/data), the scripts in [`docs/charts`](docs/charts) (Python 3 and `rsvg-convert`).
 - The same versions as experiment 1.
 
 ## Run it

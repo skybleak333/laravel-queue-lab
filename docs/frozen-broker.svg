@@ -1,0 +1,61 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350">
+<rect width="1080" height="1350" fill="#FFFFFF"/>
+<rect x="72" y="62" width="420" height="50" rx="25" fill="#EEF2FF"/>
+<text x="96.0" y="96.0" font-family="Helvetica, Arial, sans-serif" font-size="24" font-weight="bold" fill="#2563EB" text-anchor="start">TESTED ON A REAL BROKER</text>
+<text x="72.0" y="190.0" font-family="Helvetica, Arial, sans-serif" font-size="60" font-weight="bold" fill="#111827" text-anchor="start">RabbitMQ froze for 100 s.</text>
+<text x="72.0" y="262.0" font-family="Helvetica, Arial, sans-serif" font-size="52" font-weight="bold" fill="#111827" text-anchor="start">Only two of seven workers exited</text>
+<text x="72.0" y="316.0" font-family="Helvetica, Arial, sans-serif" font-size="26" font-weight="normal" fill="#6B7280" text-anchor="start">Heartbeat 15 s, Laravel 13.37, php-amqplib 3.7.5, RabbitMQ 3.13.3</text>
+<text x="72.0" y="392.0" font-family="Helvetica, Arial, sans-serif" font-size="28" font-weight="bold" fill="#111827" text-anchor="start">queue:work</text>
+<rect x="72.0" y="411.0" width="936.0" height="26" rx="6" fill="#DC2626" fill-opacity="0.22"/>
+<text x="72.0" y="470.0" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="bold" fill="#DC2626" text-anchor="start">waited until the broker was back</text>
+<text x="72.0" y="510.0" font-family="Helvetica, Arial, sans-serif" font-size="28" font-weight="bold" fill="#111827" text-anchor="start">queue:work</text>
+<text x="246.0" y="510.0" font-family="Helvetica, Arial, sans-serif" font-size="24" font-weight="normal" fill="#6B7280" text-anchor="start">--max-time=60</text>
+<rect x="72.0" y="529.0" width="936.0" height="26" rx="6" fill="#DC2626" fill-opacity="0.22"/>
+<text x="72.0" y="588.0" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="bold" fill="#DC2626" text-anchor="start">waited until the broker was back</text>
+<text x="72.0" y="628.0" font-family="Helvetica, Arial, sans-serif" font-size="28" font-weight="bold" fill="#111827" text-anchor="start">queue:work</text>
+<text x="246.0" y="628.0" font-family="Helvetica, Arial, sans-serif" font-size="24" font-weight="normal" fill="#6B7280" text-anchor="start">channel_rpc_timeout 10 s</text>
+<rect x="72.0" y="647.0" width="397.0" height="26" rx="6" fill="#2563EB" fill-opacity="0.85"/>
+<rect x="163.1" y="645.0" width="10" height="30" rx="3" fill="#6B7280"/>
+<rect x="294.2" y="645.0" width="10" height="30" rx="3" fill="#6B7280"/>
+<rect x="464.0" y="640.0" width="10" height="40" rx="3" fill="#111827"/>
+<text x="72.0" y="706.0" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="bold" fill="#2563EB" text-anchor="start">missed heartbeats: exited at 42 s, code 0</text>
+<text x="72.0" y="746.0" font-family="Helvetica, Arial, sans-serif" font-size="28" font-weight="bold" fill="#111827" text-anchor="start">queue:work</text>
+<text x="246.0" y="746.0" font-family="Helvetica, Arial, sans-serif" font-size="24" font-weight="normal" fill="#6B7280" text-anchor="start">channel_rpc_timeout 10 s, no heartbeat</text>
+<rect x="72.0" y="765.0" width="936.0" height="26" rx="6" fill="#DC2626" fill-opacity="0.22"/>
+<rect x="164.1" y="763.0" width="10" height="30" rx="3" fill="#6B7280"/>
+<rect x="295.2" y="763.0" width="10" height="30" rx="3" fill="#6B7280"/>
+<rect x="426.1" y="763.0" width="10" height="30" rx="3" fill="#6B7280"/>
+<rect x="557.0" y="763.0" width="10" height="30" rx="3" fill="#6B7280"/>
+<rect x="687.9" y="763.0" width="10" height="30" rx="3" fill="#6B7280"/>
+<rect x="818.8" y="763.0" width="10" height="30" rx="3" fill="#6B7280"/>
+<rect x="949.7" y="763.0" width="10" height="30" rx="3" fill="#6B7280"/>
+<text x="72.0" y="824.0" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="bold" fill="#DC2626" text-anchor="start">a timeout every 14 s, kept running</text>
+<text x="72.0" y="864.0" font-family="Helvetica, Arial, sans-serif" font-size="28" font-weight="bold" fill="#111827" text-anchor="start">rabbitmq:consume</text>
+<rect x="72.0" y="883.0" width="936.0" height="26" rx="6" fill="#DC2626" fill-opacity="0.22"/>
+<text x="72.0" y="942.0" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="bold" fill="#DC2626" text-anchor="start">kept running, nothing logged</text>
+<text x="72.0" y="982.0" font-family="Helvetica, Arial, sans-serif" font-size="28" font-weight="bold" fill="#111827" text-anchor="start">rabbitmq:consume</text>
+<text x="342.0" y="982.0" font-family="Helvetica, Arial, sans-serif" font-size="24" font-weight="normal" fill="#6B7280" text-anchor="start">--max-time=60</text>
+<rect x="72.0" y="1001.0" width="936.0" height="26" rx="6" fill="#DC2626" fill-opacity="0.22"/>
+<rect x="606.1" y="994.0" width="10" height="40" rx="3" fill="#F59E0B"/>
+<text x="72.0" y="1060.0" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="bold" fill="#DC2626" text-anchor="start">--max-time at 58 s, but the process didn't exit</text>
+<text x="72.0" y="1100.0" font-family="Helvetica, Arial, sans-serif" font-size="28" font-weight="bold" fill="#111827" text-anchor="start">rabbitmq:consume</text>
+<text x="342.0" y="1100.0" font-family="Helvetica, Arial, sans-serif" font-size="24" font-weight="normal" fill="#6B7280" text-anchor="start">--max-time=60, channel_rpc_timeout 10 s</text>
+<rect x="72.0" y="1119.0" width="662.3" height="26" rx="6" fill="#2563EB" fill-opacity="0.85"/>
+<rect x="607.2" y="1112.0" width="10" height="40" rx="3" fill="#F59E0B"/>
+<rect x="729.3" y="1112.0" width="10" height="40" rx="3" fill="#111827"/>
+<text x="72.0" y="1178.0" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="bold" fill="#2563EB" text-anchor="start">--max-time at 58 s, exited at 71 s with an error</text>
+<line x1="72" y1="1212" x2="1008" y2="1212" stroke="#6B7280" stroke-width="2"/>
+<line x1="72.0" y1="1212" x2="72.0" y2="1222" stroke="#6B7280" stroke-width="2"/>
+<text x="72.0" y="1250.0" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="normal" fill="#6B7280" text-anchor="middle">0 s</text>
+<line x1="258.8" y1="1212" x2="258.8" y2="1222" stroke="#6B7280" stroke-width="2"/>
+<text x="258.8" y="1250.0" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="normal" fill="#6B7280" text-anchor="middle">20 s</text>
+<line x1="445.7" y1="1212" x2="445.7" y2="1222" stroke="#6B7280" stroke-width="2"/>
+<text x="445.7" y="1250.0" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="normal" fill="#6B7280" text-anchor="middle">40 s</text>
+<line x1="632.5" y1="1212" x2="632.5" y2="1222" stroke="#6B7280" stroke-width="2"/>
+<text x="632.5" y="1250.0" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="normal" fill="#6B7280" text-anchor="middle">60 s</text>
+<line x1="819.3" y1="1212" x2="819.3" y2="1222" stroke="#6B7280" stroke-width="2"/>
+<text x="819.3" y="1250.0" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="normal" fill="#6B7280" text-anchor="middle">80 s</text>
+<line x1="1006.1" y1="1212" x2="1006.1" y2="1222" stroke="#6B7280" stroke-width="2"/>
+<text x="1006.1" y="1250.0" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="normal" fill="#6B7280" text-anchor="middle">100 s</text>
+<text x="72.0" y="1318.0" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="normal" fill="#6B7280" text-anchor="start">One local run of github.com/skybleak333/laravel-queue-lab, 16 Oct 2026</text>
+</svg>

@@ -1,0 +1,4 @@
+{"time":1792141018.490995,"pid":56786,"event":"job.start","job":"A","redelivered":false}
+{"time":1792141168.494939,"pid":56786,"event":"job.end","job":"A"}
+{"time":1792141168.50378,"pid":56786,"event":"exception","class":"PhpAmqpLib\\Exception\\AMQPProtocolChannelException","code":406,"message":"PRECONDITION_FAILED - delivery acknowledgement on channel 1 timed out. Timeout value used: 60000 ms. This timeout value can be configured, see consumers doc guide to learn more"}
+{"time":1792141169.514031,"pid":56786,"event":"process.exit","status":0}

@@ -1,0 +1,5 @@
+{"time":1792148531.099653,"pid":79194,"event":"job.start","job":"X","redelivered":false}
+{"time":1792148531.099911,"pid":79194,"event":"job.end","job":"X"}
+{"time":1792148634.420108,"pid":79194,"event":"exception","class":"PhpAmqpLib\\Exception\\AMQPRuntimeException","code":0,"message":"Lost connection: Missed server heartbeat"}
+{"time":1792148638.445495,"pid":79194,"event":"worker.stopping","status":0,"reason":"LostConnection"}
+{"time":1792148638.447428,"pid":79194,"event":"process.exit","status":0}

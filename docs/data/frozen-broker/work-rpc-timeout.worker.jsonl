@@ -1,0 +1,7 @@
+{"time":1792148531.202825,"pid":79226,"event":"job.start","job":"X","redelivered":false}
+{"time":1792148531.203015,"pid":79226,"event":"job.end","job":"X"}
+{"time":1792148544.221719,"pid":79226,"event":"exception","class":"PhpAmqpLib\\Exception\\AMQPTimeoutException","code":0,"message":"The connection timed out after 10 sec while awaiting incoming data"}
+{"time":1792148558.248778,"pid":79226,"event":"exception","class":"PhpAmqpLib\\Exception\\AMQPTimeoutException","code":0,"message":"The connection timed out after 10 sec while awaiting incoming data"}
+{"time":1792148572.262211,"pid":79226,"event":"exception","class":"PhpAmqpLib\\Exception\\AMQPRuntimeException","code":0,"message":"Lost connection: Missed server heartbeat"}
+{"time":1792148576.270955,"pid":79226,"event":"worker.stopping","status":0,"reason":"LostConnection"}
+{"time":1792148576.274355,"pid":79226,"event":"process.exit","status":0}

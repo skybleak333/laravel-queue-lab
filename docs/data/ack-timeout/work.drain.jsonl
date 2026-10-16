@@ -1,0 +1,8 @@
+{"time":1792141172.793783,"pid":57124,"event":"job.start","job":"A","redelivered":true}
+{"time":1792141172.793921,"pid":57124,"event":"job.end","job":"A"}
+{"time":1792141172.796048,"pid":57124,"event":"job.start","job":"B","redelivered":false}
+{"time":1792141172.796074,"pid":57124,"event":"job.end","job":"B"}
+{"time":1792141172.7973,"pid":57124,"event":"job.start","job":"C","redelivered":false}
+{"time":1792141172.797325,"pid":57124,"event":"job.end","job":"C"}
+{"time":1792141172.798587,"pid":57124,"event":"worker.stopping","status":0,"reason":"QueueEmpty"}
+{"time":1792141172.800422,"pid":57124,"event":"process.exit","status":0}

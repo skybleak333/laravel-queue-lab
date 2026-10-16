@@ -1,0 +1,35 @@
+{
+    "freeze": 100.2,
+    "paused": 1792148533.93203,
+    "unpaused": 1792148634.101194,
+    "scenarios": {
+        "work": {
+            "exitedAfter": 104.6,
+            "exitCode": 0
+        },
+        "work-max-time": {
+            "exitedAfter": 104.6,
+            "exitCode": 0
+        },
+        "work-rpc-timeout": {
+            "exitedAfter": 42.5,
+            "exitCode": 0
+        },
+        "work-rpc-timeout-no-heartbeat": {
+            "exitedAfter": null,
+            "exitCode": null
+        },
+        "consume": {
+            "exitedAfter": null,
+            "exitCode": null
+        },
+        "consume-max-time": {
+            "exitedAfter": 100.7,
+            "exitCode": 0
+        },
+        "consume-max-time-rpc-timeout": {
+            "exitedAfter": 70.9,
+            "exitCode": 1
+        }
+    }
+}

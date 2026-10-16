@@ -1,0 +1,4 @@
+{"time":1792148531.563444,"pid":79293,"event":"job.start","job":"X","redelivered":false}
+{"time":1792148531.563605,"pid":79293,"event":"job.end","job":"X"}
+{"time":1792148591.64776,"pid":79293,"event":"worker.stopping","status":0,"reason":"MaxTimeExceeded"}
+{"time":1792148634.426597,"pid":79293,"event":"process.exit","status":0}

@@ -1,0 +1,6 @@
+{"time":1792141018.29623,"pid":56742,"event":"job.start","job":"A","redelivered":false}
+{"time":1792141168.305921,"pid":56742,"event":"job.end","job":"A"}
+{"time":1792141168.355469,"pid":56742,"event":"exception","class":"PhpAmqpLib\\Exception\\AMQPProtocolChannelException","code":406,"message":"PRECONDITION_FAILED - delivery acknowledgement on channel 1 timed out. Timeout value used: 60000 ms. This timeout value can be configured, see consumers doc guide to learn more"}
+{"time":1792141170.385937,"pid":56742,"event":"exception","class":"PhpAmqpLib\\Exception\\AMQPRuntimeException","code":0,"message":"Lost connection: Channel connection is closed."}
+{"time":1792141172.395945,"pid":56742,"event":"worker.stopping","status":0,"reason":"LostConnection"}
+{"time":1792141172.416293,"pid":56742,"event":"process.exit","status":0}

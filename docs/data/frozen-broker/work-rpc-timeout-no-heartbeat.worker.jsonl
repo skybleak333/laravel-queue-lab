@@ -1,0 +1,9 @@
+{"time":1792148531.306839,"pid":79247,"event":"job.start","job":"X","redelivered":false}
+{"time":1792148531.306995,"pid":79247,"event":"job.end","job":"X"}
+{"time":1792148544.330804,"pid":79247,"event":"exception","class":"PhpAmqpLib\\Exception\\AMQPTimeoutException","code":0,"message":"The connection timed out after 10 sec while awaiting incoming data"}
+{"time":1792148558.360664,"pid":79247,"event":"exception","class":"PhpAmqpLib\\Exception\\AMQPTimeoutException","code":0,"message":"The connection timed out after 10 sec while awaiting incoming data"}
+{"time":1792148572.373411,"pid":79247,"event":"exception","class":"PhpAmqpLib\\Exception\\AMQPTimeoutException","code":0,"message":"The connection timed out after 10 sec while awaiting incoming data"}
+{"time":1792148586.386745,"pid":79247,"event":"exception","class":"PhpAmqpLib\\Exception\\AMQPTimeoutException","code":0,"message":"The connection timed out after 10 sec while awaiting incoming data"}
+{"time":1792148600.396002,"pid":79247,"event":"exception","class":"PhpAmqpLib\\Exception\\AMQPTimeoutException","code":0,"message":"The connection timed out after 10 sec while awaiting incoming data"}
+{"time":1792148614.415294,"pid":79247,"event":"exception","class":"PhpAmqpLib\\Exception\\AMQPTimeoutException","code":0,"message":"The connection timed out after 10 sec while awaiting incoming data"}
+{"time":1792148628.422751,"pid":79247,"event":"exception","class":"PhpAmqpLib\\Exception\\AMQPTimeoutException","code":0,"message":"The connection timed out after 10 sec while awaiting incoming data"}

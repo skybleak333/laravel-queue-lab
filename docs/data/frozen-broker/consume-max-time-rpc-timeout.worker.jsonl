@@ -1,0 +1,5 @@
+{"time":1792148531.664648,"pid":79314,"event":"job.start","job":"X","redelivered":false}
+{"time":1792148531.664783,"pid":79314,"event":"job.end","job":"X"}
+{"time":1792148591.756905,"pid":79314,"event":"worker.stopping","status":0,"reason":"MaxTimeExceeded"}
+{"time":1792148604.781147,"pid":79314,"event":"exception","class":"PhpAmqpLib\\Exception\\AMQPHeartbeatMissedException","code":0,"message":"Missed server heartbeat"}
+{"time":1792148604.807421,"pid":79314,"event":"process.exit","status":1}
