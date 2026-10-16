@@ -3,8 +3,10 @@
 namespace Lab;
 
 use Illuminate\Contracts\Console\Kernel;
+use Illuminate\Contracts\Debug\ExceptionHandler;
 use Symfony\Component\Console\Input\ArgvInput;
 use Symfony\Component\Console\Output\ConsoleOutput;
+use Throwable;
 
 /**
  * bin/lab push <queue> <job>...   push jobs, job = name[:seconds], e.g. A:150 B C
@@ -39,8 +41,18 @@ final class Cli
             case 'artisan':
                 $kernel = $app->make(Kernel::class);
                 $input = new ArgvInput(array_merge(['artisan'], array_slice($argv, 2)));
+                $output = new ConsoleOutput;
 
-                $status = $kernel->handle($input, new ConsoleOutput);
+                try {
+                    $status = $kernel->handle($input, $output);
+                } catch (Throwable $e) {
+                    // Testbench's console kernel rethrows what a command throws. The kernel of a
+                    // Laravel application reports it, prints it and returns 1, and so does the lab.
+                    $handler = $app->make(ExceptionHandler::class);
+                    $handler->report($e);
+                    $handler->renderForConsole($output, $e);
+                    $status = 1;
+                }
 
                 EventLog::write('process.exit', ['status' => $status]);
                 $kernel->terminate($input, $status);

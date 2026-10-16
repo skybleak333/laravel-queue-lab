@@ -3,8 +3,6 @@
 namespace Lab\Tests;
 
 use Lab\EventLog;
-use PHPUnit\Framework\TestCase;
-use RuntimeException;
 
 /**
  * A job that runs longer than RabbitMQ's delivery acknowledgement timeout.
@@ -14,7 +12,7 @@ use RuntimeException;
  * has exited, its queue is drained with queue:work --stop-when-empty, and the drain
  * shows which messages the broker delivered again.
  */
-final class AckTimeoutTest extends TestCase
+final class AckTimeoutTest extends ExperimentTestCase
 {
     private const SCENARIOS = [
         'work' => ['queue:work'],
@@ -38,11 +36,7 @@ final class AckTimeoutTest extends TestCase
         self::waitForBroker();
 
         $slow = (int) (getenv('LAB_SLOW_JOB_SECONDS') ?: 150);
-        $dir = sys_get_temp_dir().'/laravel-queue-lab-'.getmypid();
-
-        if (! is_dir($dir)) {
-            mkdir($dir, 0777, true);
-        }
+        $dir = self::logDirectory('ack-timeout');
 
         $runs = [];
 
@@ -157,67 +151,5 @@ final class AckTimeoutTest extends TestCase
         ksort($deliveries);
 
         return $deliveries;
-    }
-
-    /**
-     * @param  list<array<string, mixed>>  $log
-     * @return list<array<string, mixed>>
-     */
-    private static function events(array $log, string $event): array
-    {
-        return array_values(array_filter($log, static fn (array $line): bool => $line['event'] === $event));
-    }
-
-    private static function waitForBroker(): void
-    {
-        $host = getenv('LAB_AMQP_HOST') ?: '127.0.0.1';
-        $port = (int) (getenv('LAB_AMQP_PORT') ?: 5672);
-
-        for ($i = 0; $i < 60; $i++) {
-            $socket = @fsockopen($host, $port, $errno, $error, 1);
-
-            if ($socket !== false) {
-                fclose($socket);
-
-                return;
-            }
-
-            sleep(1);
-        }
-
-        throw new RuntimeException("RabbitMQ is not reachable on {$host}:{$port}. Start it with: docker compose up -d --wait");
-    }
-
-    /**
-     * @param  list<string>  $args
-     */
-    private static function lab(array $args, string $log): void
-    {
-        $exit = proc_close(self::start($args, $log, $log.'.out'));
-
-        if ($exit !== 0) {
-            throw new RuntimeException('bin/lab '.implode(' ', $args)." exited with {$exit}, see {$log}.out");
-        }
-    }
-
-    /**
-     * @param  list<string>  $args
-     * @return resource
-     */
-    private static function start(array $args, string $log, string $output)
-    {
-        $process = proc_open(
-            array_merge([PHP_BINARY, dirname(__DIR__).'/bin/lab'], $args),
-            [0 => ['file', '/dev/null', 'r'], 1 => ['file', $output, 'w'], 2 => ['file', $output, 'a']],
-            $pipes,
-            dirname(__DIR__),
-            ['LAB_EVENT_LOG' => $log] + getenv(),
-        );
-
-        if (! is_resource($process)) {
-            throw new RuntimeException('Could not start bin/lab '.implode(' ', $args));
-        }
-
-        return $process;
     }
 }
