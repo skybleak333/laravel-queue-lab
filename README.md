@@ -71,7 +71,7 @@ Times are seconds after the broker froze. After the broker is back, the test wat
 | `rabbitmq:consume --max-time=60` | `WorkerStopping` with `MaxTimeExceeded` at 58 s, but the process doesn't exit | Exits at once, exit code 0 |
 | `rabbitmq:consume --max-time=60`, `channel_rpc_timeout` 10 s | `MaxTimeExceeded` at 58 s. 13 s later, `AMQPHeartbeatMissedException` while closing the connection, exit code 1 | — |
 
-Heartbeats alone don't help, and neither does the timeout alone. A worker notices the frozen broker only with both.
+Heartbeats alone don't help, and neither does the timeout alone: `queue:work` notices the frozen broker only with both. `rabbitmq:consume` doesn't notice it even then.
 
 ### Why
 
