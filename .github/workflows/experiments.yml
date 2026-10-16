@@ -35,7 +35,7 @@ jobs:
         run: composer update --prefer-dist --no-interaction --no-progress
 
       - name: Show versions
-        run: composer show laravel/framework vladimir-yuldashev/laravel-queue-rabbitmq php-amqplib/php-amqplib | grep -E '^(name|versions)'
+        run: composer show | grep -E '^(laravel/framework|orchestra/testbench|php-amqplib/php-amqplib|phpunit/phpunit|vladimir-yuldashev/laravel-queue-rabbitmq) '
 
       - name: Run the experiments
         run: vendor/bin/phpunit
