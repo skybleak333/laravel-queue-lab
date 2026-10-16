@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640">
+<rect width="1280" height="640" fill="#FFFFFF"/>
+<rect x="80" y="64" width="330" height="48" rx="24" fill="#EEF2FF"/>
+<text x="104" y="97" font-family="Helvetica, Arial, sans-serif" font-size="26" font-weight="bold" fill="#2563EB" text-anchor="start">laravel-queue-lab</text>
+<text x="80" y="196" font-family="Helvetica, Arial, sans-serif" font-size="58" font-weight="bold" fill="#111827" text-anchor="start">What Laravel queue workers do</text>
+<text x="80" y="262" font-family="Helvetica, Arial, sans-serif" font-size="58" font-weight="bold" fill="#111827" text-anchor="start">when RabbitMQ misbehaves</text>
+<rect x="80" y="308" width="8" height="70" rx="3" fill="#DC2626"/>
+<text x="108" y="334" font-family="Helvetica, Arial, sans-serif" font-size="30" font-weight="bold" fill="#111827" text-anchor="start">A job outlives the ack timeout:</text>
+<text x="108" y="372" font-family="Helvetica, Arial, sans-serif" font-size="28" font-weight="normal" fill="#6B7280" text-anchor="start">the worker exits, and the job runs twice</text>
+<rect x="80" y="396" width="8" height="70" rx="3" fill="#DC2626"/>
+<text x="108" y="422" font-family="Helvetica, Arial, sans-serif" font-size="30" font-weight="bold" fill="#111827" text-anchor="start">The broker freezes:</text>
+<text x="108" y="460" font-family="Helvetica, Arial, sans-serif" font-size="28" font-weight="normal" fill="#6B7280" text-anchor="start">with default timeouts, queue:work waits even with heartbeats on</text>
+<rect x="80" y="484" width="8" height="70" rx="3" fill="#DC2626"/>
+<text x="108" y="510" font-family="Helvetica, Arial, sans-serif" font-size="30" font-weight="bold" fill="#111827" text-anchor="start">php artisan down:</text>
+<text x="108" y="548" font-family="Helvetica, Arial, sans-serif" font-size="28" font-weight="normal" fill="#6B7280" text-anchor="start">rabbitmq:consume ignores SIGTERM until artisan up</text>
+<text x="80" y="606" font-family="Helvetica, Arial, sans-serif" font-size="24" font-weight="normal" fill="#6B7280" text-anchor="start">Reproducible PHPUnit experiments on a real broker · CI on PHP 8.3–8.5</text>
+</svg>
