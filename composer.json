@@ -1,0 +1,42 @@
+{
+    "name": "skybleak333/laravel-queue-lab",
+    "description": "Reproducible experiments with Laravel queue workers against a real message broker.",
+    "type": "project",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Andrei Fedoseev"
+        }
+    ],
+    "require": {
+        "php": "^8.3",
+        "laravel/framework": "^13.0",
+        "orchestra/testbench": "^11.0",
+        "vladimir-yuldashev/laravel-queue-rabbitmq": "dev-fix/consumer-worker-api"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11.5 || ^12.0"
+    },
+    "repositories": [
+        {
+            "type": "vcs",
+            "url": "https://github.com/skybleak333/laravel-queue-rabbitmq"
+        }
+    ],
+    "autoload": {
+        "psr-4": {
+            "Lab\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Lab\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit"
+    },
+    "config": {
+        "sort-packages": true
+    }
+}

@@ -1,0 +1,23 @@
+# RabbitMQ for the experiments, with a 60 s delivery acknowledgement timeout.
+#
+#   docker compose up -d --wait
+#   docker compose down -v
+#
+# The health check opens the AMQP port from inside the container. It does not run
+# rabbitmq-diagnostics: started as root during boot, the CLI can create
+# /var/lib/rabbitmq/.erlang.cookie before the broker does and make the broker fail.
+
+name: laravel-queue-lab
+
+services:
+  rabbitmq:
+    image: rabbitmq:3.13.3
+    volumes:
+      - ./rabbitmq/ack-timeout.conf:/etc/rabbitmq/conf.d/90-ack-timeout.conf:ro
+    ports:
+      - "127.0.0.1:${LAB_AMQP_PORT:-5672}:5672"
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo > /dev/tcp/127.0.0.1/5672"]
+      interval: 2s
+      timeout: 2s
+      retries: 60
