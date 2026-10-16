@@ -1,0 +1,4 @@
+{"time":1792154011.799474,"pid":97018,"event":"job.start","job":"X","redelivered":false}
+{"time":1792154011.799632,"pid":97018,"event":"job.end","job":"X"}
+{"time":1792154022.421466,"pid":97018,"event":"worker.stopping","status":0,"reason":"Interrupted"}
+{"time":1792154022.427298,"pid":97018,"event":"process.exit","status":0}

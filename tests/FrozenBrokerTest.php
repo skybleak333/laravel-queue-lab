@@ -101,13 +101,7 @@ final class FrozenBrokerTest extends ExperimentTestCase
 
             self::watch($workers, $paused, $unpaused + self::AFTER);
         } finally {
-            foreach ($workers as $worker) {
-                if (proc_get_status($worker['process'])['running']) {
-                    proc_terminate($worker['process'], SIGKILL);
-                }
-
-                proc_close($worker['process']);
-            }
+            self::stopAll($workers);
         }
 
         foreach ($workers as $name => $worker) {
@@ -264,54 +258,6 @@ final class FrozenBrokerTest extends ExperimentTestCase
     private static function messages(array $events): string
     {
         return implode("\n", array_column($events, 'message'));
-    }
-
-    /**
-     * Records when each worker exits, until $until (a microtime() value).
-     *
-     * @param  array<string, array{process: resource, exitedAfter: float|null, exitCode: int|null}>  $workers
-     */
-    private static function watch(array &$workers, float $paused, float $until): void
-    {
-        while (microtime(true) < $until) {
-            foreach ($workers as $name => $worker) {
-                if ($worker['exitedAfter'] !== null) {
-                    continue;
-                }
-
-                $status = proc_get_status($worker['process']);
-
-                if (! $status['running']) {
-                    $workers[$name]['exitedAfter'] = microtime(true) - $paused;
-                    $workers[$name]['exitCode'] = $status['exitcode'];
-                }
-            }
-
-            usleep(200_000);
-        }
-    }
-
-    /**
-     * Waits until every worker has run its job, so that all of them are idle.
-     *
-     * @param  array<string, array{log: string, process: resource}>  $workers
-     */
-    private static function waitUntilIdle(array $workers): void
-    {
-        $deadline = microtime(true) + 60;
-
-        foreach ($workers as $name => $worker) {
-            while (self::events(EventLog::read($worker['log']), 'job.end') === []) {
-                if (! proc_get_status($worker['process'])['running'] || microtime(true) > $deadline) {
-                    throw new RuntimeException("The {$name} worker did not run its job, see {$worker['log']}");
-                }
-
-                usleep(200_000);
-            }
-        }
-
-        // Let the workers get back to waiting for the next job.
-        sleep(2);
     }
 
     private static function unpause(): void

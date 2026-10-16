@@ -4,8 +4,12 @@ namespace Lab;
 
 use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Foundation\Application as LaravelApplication;
+use Illuminate\Queue\Events\JobPopping;
+use Illuminate\Queue\Events\WorkerPausing;
+use Illuminate\Queue\Events\WorkerQueuePaused;
 use Illuminate\Queue\Events\WorkerStopping;
 use Orchestra\Testbench\Foundation\Application;
+use RuntimeException;
 use Throwable;
 use UnitEnum;
 use VladimirYuldashev\LaravelQueueRabbitMQ\LaravelQueueRabbitMQServiceProvider;
@@ -43,8 +47,27 @@ final class Lab
             'options' => self::connectionOptions(),
             'worker' => 'default',
         ]);
-        $config->set('cache.default', 'array');
         $config->set('logging.default', 'null');
+
+        // LAB_STORAGE gives the processes of one experiment a storage directory of their own:
+        // the maintenance mode flag (artisan down) and the file cache that queue:restart writes
+        // to are then shared by the workers and the commands that signal them.
+        $storage = getenv('LAB_STORAGE');
+
+        if (is_string($storage) && $storage !== '') {
+            $cache = $storage.'/framework/cache/data';
+
+            // Several processes of one experiment may start at once on a fresh directory.
+            if (! is_dir($cache) && ! @mkdir($cache, 0777, true) && ! is_dir($cache)) {
+                throw new RuntimeException("Could not create {$cache}");
+            }
+
+            $app->useStoragePath($storage);
+            $config->set('cache.default', 'file');
+            $config->set('cache.stores.file.path', $storage.'/framework/cache/data');
+        } else {
+            $config->set('cache.default', 'array');
+        }
 
         $handler = $app->make(ExceptionHandler::class);
 
@@ -53,6 +76,11 @@ final class Lab
                 EventLog::write('exception', ['class' => $e::class, 'code' => $e->getCode(), 'message' => $e->getMessage()]);
             });
         }
+
+        // A worker that pops a job is not paused; these events show which workers were.
+        $app['events']->listen(JobPopping::class, static fn () => EventLog::write('job.popping'));
+        $app['events']->listen(WorkerPausing::class, static fn () => EventLog::write('worker.pausing'));
+        $app['events']->listen(WorkerQueuePaused::class, static fn (WorkerQueuePaused $event) => EventLog::write('worker.queue_paused', ['queue' => $event->queue]));
 
         $app['events']->listen(WorkerStopping::class, static function (WorkerStopping $event): void {
             $reason = property_exists($event, 'reason') ? $event->reason : null;

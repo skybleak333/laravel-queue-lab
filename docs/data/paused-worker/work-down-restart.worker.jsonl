@@ -1,0 +1,6 @@
+{"time":1792154012.348322,"pid":97132,"event":"job.popping"}
+{"time":1792154012.35956,"pid":97132,"event":"job.start","job":"X","redelivered":false}
+{"time":1792154012.359616,"pid":97132,"event":"job.end","job":"X"}
+{"time":1792154012.36007,"pid":97132,"event":"job.popping"}
+{"time":1792154024.376666,"pid":97132,"event":"worker.stopping","status":0,"reason":"ReceivedRestartSignal"}
+{"time":1792154024.379809,"pid":97132,"event":"process.exit","status":0}

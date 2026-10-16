@@ -8,6 +8,7 @@ What the experiments found, with `queue:work` and `rabbitmq:consume` from [vyuld
 
 - **[A job outlives RabbitMQ's acknowledgement timeout.](#experiment-1-a-job-that-outlives-rabbitmqs-acknowledgement-timeout)** The workers don't hang: they exit with code 0, and the job runs twice. With `rabbitmq:consume` and the default prefetch, the jobs already in the client buffer run twice too.
 - **[The broker stops answering.](#experiment-2-a-broker-that-stops-answering)** With the default timeouts, `queue:work` waits until the broker is back, even with heartbeats on, and `--timeout` doesn't help. `rabbitmq:consume` doesn't notice at all.
+- **[A worker is paused or the app is in maintenance mode.](#experiment-3-a-worker-that-is-paused-or-in-maintenance-mode)** `rabbitmq:consume` ignores SIGTERM and `queue:restart` until the pause ends, then runs one more job before it stops. While it is paused, it holds messages that other workers can't take, and it ignores `queue:pause`. `queue:work` stops at once on SIGTERM and within `--sleep` on `queue:restart`.
 
 ## Experiment 1: a job that outlives RabbitMQ's acknowledgement timeout
 
@@ -109,6 +110,62 @@ What that means for the workers:
 - The seconds come from local runs with PHP 8.4. The test checks what happens in each scenario, not the exact times. The charts are drawn from the event logs of one local run: the logs are in [`docs/data`](docs/data), the scripts in [`docs/charts`](docs/charts) (Python 3 and `rsvg-convert`).
 - The same versions as experiment 1.
 
+## Experiment 3: a worker that is paused or in maintenance mode
+
+Laravel pauses a worker while the application is in maintenance mode (`php artisan down`, unless the worker runs with `--force`) and after SIGUSR2 until SIGCONT. It also skips the queues paused with `php artisan queue:pause`. What does `rabbitmq:consume` do in these cases? [Issue #587](https://github.com/vyuldashev/laravel-queue-rabbitmq/issues/587) in the package reports that `queue:restart` doesn't restart it.
+
+### Setup
+
+- Six situations: maintenance mode, then SIGTERM; SIGUSR2, then SIGTERM; `queue:restart` on idle workers; maintenance mode, then `queue:restart` and three new jobs Y1–Y3; a queue paused with `queue:pause`, then a new job Z; and a `rabbitmq:consume` in maintenance mode that shares its queue with a `queue:work` that isn't, then jobs H1–H3.
+- Each situation has a storage directory of its own, so its maintenance flag and the restart and pause flags in the file cache reach only its own workers.
+- The workers are held for 7 s. Then they get the stop signal or the new jobs and 15 s to react. Then the hold ends (`artisan up`, SIGCONT, `queue:resume`), and they get 15 s more. The times below come from the event logs.
+- Workers run with `--sleep=3`. Heartbeats are off, as in the package's default configuration, and the broker's `consumer_timeout` is 60 s: see the limits.
+
+### Result
+
+| Situation | `queue:work` | `rabbitmq:consume` |
+|---|---|---|
+| Maintenance mode, then SIGTERM | Stops at once (`Interrupted`) | Keeps running. Stops about 6 s after `artisan up`. With `--force` it stops at once |
+| Paused with SIGUSR2, then SIGTERM | Stops at once | Keeps running. Stops about 3 s after SIGCONT |
+| Idle, then `queue:restart` | Stops within one `--sleep` (`ReceivedRestartSignal`) | The same |
+| Maintenance mode, then `queue:restart` and Y1–Y3 | Stops within one `--sleep` and leaves Y1–Y3 in the queue | Keeps running. After `artisan up` it runs Y1, then stops; Y2 and Y3 go back to the queue and are delivered again |
+| `queue:pause`, then Z | Takes Z only after `queue:resume` | Runs Z at once |
+| Maintenance mode, then H1–H3 | — | Holds H1–H3: the `queue:work` on the same queue keeps asking for jobs and gets none. Runs all three after `artisan up` |
+
+Every worker that stopped exited with code 0. `rabbitmq:consume` drops the worker's exit status (`ConsumeCommand::handle()` returns nothing), so it exits with 0 unless an exception escapes.
+
+On these versions `queue:restart` does restart an idle `rabbitmq:consume`, so #587 doesn't reproduce in the simple case. While the worker is paused, the restart waits until the pause ends.
+
+<img src="docs/paused-worker.png" alt="Timeline of one run: queue:work stops at once on SIGTERM in maintenance mode, rabbitmq:consume only after artisan up" width="480">
+
+### Why
+
+- When the application is down or the worker is paused, `Worker::daemon()` in Laravel calls `pauseWorker()`. It sleeps `--sleep` seconds (at least 1) and returns what `stopIfNecessary()` decides, and the daemon stops on it. SIGTERM cuts the sleep short, so `queue:work` stops at once; a restart is seen at the end of the sleep. By the code, `--max-time` and the memory limit work the same way.
+- `Consumer::daemon()` in the package also calls `pauseWorker()`, but drops the result ([`Consumer.php`](https://github.com/vyuldashev/laravel-queue-rabbitmq/blob/92ebf0754b3906eae3e84d81c97770171e8ad094/src/Consumer.php#L147)). The call dates from [#289](https://github.com/vyuldashev/laravel-queue-rabbitmq/pull/289) (2019), when Laravel 6 and 7 stopped the process inside `pauseWorker()` itself. Since Laravel 8, `pauseWorker()` returns the decision instead. The package's pause branch has dropped it since v11.0.0 (September 2020); v11.1.2 ([#409](https://github.com/vyuldashev/laravel-queue-rabbitmq/pull/409), March 2021) fixed the same problem in the main loop only.
+- So the consumer acts on a stop signal only after the pause and one more `wait()`. A paused consumer keeps its subscription, and the broker keeps sending it messages, up to the prefetch count (1000 by default). The next `wait()` runs one of them. Then the loop stops, the connection closes, and the rest go back to the queue.
+- Laravel applies `queue:pause` in `Worker::getNextJob()`, which `rabbitmq:consume` never calls.
+- `--force` keeps the worker out of the pause in maintenance mode.
+
+### What it means
+
+- A stop that comes while the application is down waits for `artisan up` or for SIGKILL. supervisord sends SIGKILL after `stopwaitsecs`: 10 s by default, 3600 s in the [Laravel docs example](https://laravel.com/docs/13.x/queues#supervisor-configuration). Kubernetes sends it after `terminationGracePeriodSeconds`, 30 s by default.
+- If a deploy runs `queue:restart` while the application is down, `rabbitmq:consume` restarts only after `artisan up`, and the old process runs one more job first. That process keeps the configuration and the classes it loaded before the deploy.
+- While a server is down, its paused `rabbitmq:consume` holds up to `--prefetch-count` messages that the workers of other servers can't take. With the default file driver, `artisan down` affects only the server it runs on; with the cache driver, every server that shares the cache.
+- `queue:pause` doesn't stop `rabbitmq:consume`.
+
+### What helps
+
+- Stop `rabbitmq:consume` workers before `php artisan down` and start them after `php artisan up`. Or use `queue:work`.
+- `--force` makes the worker handle signals in maintenance mode, but it also keeps the worker running jobs while the application is down.
+- A low `--prefetch-count` limits how many messages a paused consumer holds.
+- In the package, the fix is to stop on what `pauseWorker()` returns, as `Worker::daemon()` does, and to pass the start time: without it, `--max-time` would fire at the first pause. It isn't in the package yet.
+
+### Limits
+
+- Heartbeats are off, and the hold is shorter than the broker's `consumer_timeout` (60 s here, 30 minutes by default). A paused process does no AMQP reads or writes, so it sends no heartbeats. By the code and the AMQP rules, with heartbeats on the broker closes the connection after two missed heartbeats, and with a pause longer than `consumer_timeout` it closes the channel. Either way the held messages go back to the queue, and the old process fails on its next `wait()` instead of running one of them. This isn't tested here.
+- Maintenance mode with the default file driver.
+- The same versions as experiments 1 and 2. #587 was reported on Laravel 9 with package 13.3.5; those versions weren't tested.
+
 ## Run it
 
 Requirements: PHP 8.3+ with `pcntl` and `sockets`, Composer and Docker.
@@ -116,11 +173,11 @@ Requirements: PHP 8.3+ with `pcntl` and `sockets`, Composer and Docker.
 ```bash
 docker compose up -d --wait   # RabbitMQ on 127.0.0.1:5672
 composer update
-composer test                 # about 5 minutes
+composer test                 # about 6 minutes
 docker compose down -v
 ```
 
-`LAB_AMQP_PORT` changes the port. Experiment 2 freezes the broker with `docker compose pause rabbitmq`, so it needs the broker from `compose.yaml`. The workers write one JSON event per line to a temporary directory; experiment 2 also writes `results.json` there with the seconds from the freeze to each exit. [`tests/AckTimeoutTest.php`](tests/AckTimeoutTest.php) and [`tests/FrozenBrokerTest.php`](tests/FrozenBrokerTest.php) show what is checked. `LAB_HEARTBEAT`, `LAB_IO_TIMEOUT` and `LAB_RPC_TIMEOUT` set the connection options of a process run by hand; the experiments set their own. `bin/lab artisan` treats a failing command like `php artisan` in an application: the exception is reported and printed, and the exit code is 1. To run a worker by hand:
+`LAB_AMQP_PORT` changes the port. Experiment 2 freezes the broker with `docker compose pause rabbitmq`, so it needs the broker from `compose.yaml`. The workers write one JSON event per line to a temporary directory; experiments 2 and 3 also write their timings to `results.json` there. Every experiment gives its workers a storage directory of their own (`LAB_STORAGE`) for the maintenance flag and the file cache. If you stop a run with Ctrl+C, the experiments kill their workers; should one survive, `pkill -f 'bin/lab artisan'` stops it. [`tests/AckTimeoutTest.php`](tests/AckTimeoutTest.php), [`tests/FrozenBrokerTest.php`](tests/FrozenBrokerTest.php) and [`tests/PausedWorkerTest.php`](tests/PausedWorkerTest.php) show what is checked. `LAB_HEARTBEAT`, `LAB_IO_TIMEOUT`, `LAB_RPC_TIMEOUT` and `LAB_STORAGE` set the connection options and the storage directory of a process run by hand; the experiments set their own. `bin/lab artisan` treats a failing command like `php artisan` in an application: the exception is reported and printed, and the exit code is 1. To run a worker by hand:
 
 ```bash
 export LAB_EVENT_LOG=/tmp/events.jsonl

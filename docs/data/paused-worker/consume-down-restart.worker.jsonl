@@ -1,0 +1,6 @@
+{"time":1792154012.456829,"pid":97135,"event":"job.start","job":"X","redelivered":false}
+{"time":1792154012.456987,"pid":97135,"event":"job.end","job":"X"}
+{"time":1792154039.498621,"pid":97135,"event":"job.start","job":"Y1","redelivered":false}
+{"time":1792154039.499002,"pid":97135,"event":"job.end","job":"Y1"}
+{"time":1792154039.501969,"pid":97135,"event":"worker.stopping","status":0,"reason":"ReceivedRestartSignal"}
+{"time":1792154039.506437,"pid":97135,"event":"process.exit","status":0}

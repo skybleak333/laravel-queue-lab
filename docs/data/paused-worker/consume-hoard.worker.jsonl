@@ -1,0 +1,8 @@
+{"time":1792154012.766216,"pid":97221,"event":"job.start","job":"X","redelivered":false}
+{"time":1792154012.766355,"pid":97221,"event":"job.end","job":"X"}
+{"time":1792154039.815929,"pid":97221,"event":"job.start","job":"H1","redelivered":false}
+{"time":1792154039.816206,"pid":97221,"event":"job.end","job":"H1"}
+{"time":1792154039.817926,"pid":97221,"event":"job.start","job":"H2","redelivered":false}
+{"time":1792154039.818041,"pid":97221,"event":"job.end","job":"H2"}
+{"time":1792154039.819164,"pid":97221,"event":"job.start","job":"H3","redelivered":false}
+{"time":1792154039.819226,"pid":97221,"event":"job.end","job":"H3"}

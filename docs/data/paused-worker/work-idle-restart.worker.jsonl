@@ -1,0 +1,9 @@
+{"time":1792154012.115501,"pid":97088,"event":"job.popping"}
+{"time":1792154012.13049,"pid":97088,"event":"job.start","job":"X","redelivered":false}
+{"time":1792154012.130541,"pid":97088,"event":"job.end","job":"X"}
+{"time":1792154012.131025,"pid":97088,"event":"job.popping"}
+{"time":1792154015.132797,"pid":97088,"event":"job.popping"}
+{"time":1792154018.138986,"pid":97088,"event":"job.popping"}
+{"time":1792154021.142869,"pid":97088,"event":"job.popping"}
+{"time":1792154024.152778,"pid":97088,"event":"worker.stopping","status":0,"reason":"ReceivedRestartSignal"}
+{"time":1792154024.158068,"pid":97088,"event":"process.exit","status":0}

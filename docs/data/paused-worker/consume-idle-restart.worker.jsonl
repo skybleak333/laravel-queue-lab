@@ -1,0 +1,4 @@
+{"time":1792154012.245993,"pid":97111,"event":"job.start","job":"X","redelivered":false}
+{"time":1792154012.246134,"pid":97111,"event":"job.end","job":"X"}
+{"time":1792154024.266815,"pid":97111,"event":"worker.stopping","status":0,"reason":"ReceivedRestartSignal"}
+{"time":1792154024.271193,"pid":97111,"event":"process.exit","status":0}

@@ -1,0 +1,8 @@
+{"time":1792154011.897153,"pid":97021,"event":"job.popping"}
+{"time":1792154011.906858,"pid":97021,"event":"job.start","job":"X","redelivered":false}
+{"time":1792154011.906908,"pid":97021,"event":"job.end","job":"X"}
+{"time":1792154011.907315,"pid":97021,"event":"job.popping"}
+{"time":1792154014.913407,"pid":97021,"event":"job.popping"}
+{"time":1792154015.216772,"pid":97021,"event":"worker.pausing"}
+{"time":1792154022.421484,"pid":97021,"event":"worker.stopping","status":0,"reason":"Interrupted"}
+{"time":1792154022.42712,"pid":97021,"event":"process.exit","status":0}

@@ -1,0 +1,132 @@
+{
+    "signalledAt": 1792154022.417987,
+    "held": -7.01,
+    "released": {
+        "down-sigterm": 15.45,
+        "down-restart": 15.57,
+        "hoard": 15.67,
+        "sigusr2-sigterm": 15.67,
+        "queue-pause": 15.87
+    },
+    "workers": {
+        "work-down-sigterm": {
+            "stoppedAfter": 0,
+            "reason": "Interrupted",
+            "exitCode": 0,
+            "jobs": [
+                "X"
+            ]
+        },
+        "consume-down-sigterm": {
+            "stoppedAfter": 21.03,
+            "reason": "Interrupted",
+            "exitCode": 0,
+            "jobs": [
+                "X"
+            ]
+        },
+        "consume-force-down-sigterm": {
+            "stoppedAfter": 0,
+            "reason": "Interrupted",
+            "exitCode": 0,
+            "jobs": [
+                "X"
+            ]
+        },
+        "work-sigusr2-sigterm": {
+            "stoppedAfter": 0,
+            "reason": "Interrupted",
+            "exitCode": 0,
+            "jobs": [
+                "X"
+            ]
+        },
+        "consume-sigusr2-sigterm": {
+            "stoppedAfter": 18.7,
+            "reason": "Interrupted",
+            "exitCode": 0,
+            "jobs": [
+                "X"
+            ]
+        },
+        "work-idle-restart": {
+            "stoppedAfter": 1.73,
+            "reason": "ReceivedRestartSignal",
+            "exitCode": 0,
+            "jobs": [
+                "X"
+            ]
+        },
+        "consume-idle-restart": {
+            "stoppedAfter": 1.85,
+            "reason": "ReceivedRestartSignal",
+            "exitCode": 0,
+            "jobs": [
+                "X"
+            ]
+        },
+        "work-down-restart": {
+            "stoppedAfter": 1.96,
+            "reason": "ReceivedRestartSignal",
+            "exitCode": 0,
+            "jobs": [
+                "X"
+            ]
+        },
+        "consume-down-restart": {
+            "stoppedAfter": 17.08,
+            "reason": "ReceivedRestartSignal",
+            "exitCode": 0,
+            "jobs": [
+                "X",
+                "Y1"
+            ]
+        },
+        "work-queue-pause": {
+            "stoppedAfter": null,
+            "reason": null,
+            "exitCode": null,
+            "jobs": [
+                "X",
+                "Z"
+            ]
+        },
+        "consume-queue-pause": {
+            "stoppedAfter": null,
+            "reason": null,
+            "exitCode": null,
+            "jobs": [
+                "X",
+                "Z"
+            ]
+        },
+        "consume-hoard": {
+            "stoppedAfter": null,
+            "reason": null,
+            "exitCode": null,
+            "jobs": [
+                "X",
+                "H1",
+                "H2",
+                "H3"
+            ]
+        },
+        "work-hoard-healthy": {
+            "stoppedAfter": null,
+            "reason": null,
+            "exitCode": null,
+            "jobs": []
+        }
+    },
+    "drains": {
+        "work-down-restart": {
+            "Y1": false,
+            "Y2": false,
+            "Y3": false
+        },
+        "consume-down-restart": {
+            "Y2": true,
+            "Y3": true
+        }
+    }
+}

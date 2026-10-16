@@ -1,0 +1,78 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1350" viewBox="0 0 1080 1350">
+<rect width="1080" height="1350" fill="#FFFFFF"/>
+<rect x="72" y="62" width="420" height="50" rx="25" fill="#EEF2FF"/>
+<text x="96.0" y="96.0" font-family="Helvetica, Arial, sans-serif" font-size="24" font-weight="bold" fill="#2563EB" text-anchor="start">TESTED ON A REAL BROKER</text>
+<text x="72.0" y="190.0" font-family="Helvetica, Arial, sans-serif" font-size="56" font-weight="bold" fill="#111827" text-anchor="start">SIGTERM during artisan down:</text>
+<text x="72.0" y="254.0" font-family="Helvetica, Arial, sans-serif" font-size="44" font-weight="bold" fill="#111827" text-anchor="start">rabbitmq:consume waits for artisan up</text>
+<text x="72.0" y="312.0" font-family="Helvetica, Arial, sans-serif" font-size="24" font-weight="normal" fill="#6B7280" text-anchor="start">Laravel 13.37, RabbitMQ 3.13.3, --sleep=3. 0 s = SIGTERM or queue:restart</text>
+<text x="72.0" y="396.0" font-family="Helvetica, Arial, sans-serif" font-size="26" font-weight="bold" fill="#111827" text-anchor="start">queue:work</text>
+<text x="236.0" y="396.0" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="normal" fill="#6B7280" text-anchor="start">artisan down, then SIGTERM</text>
+<line x1="292.2" y1="404.0" x2="292.2" y2="448.0" stroke="#111827" stroke-width="2" stroke-dasharray="4 4"/>
+<rect x="99.3" y="414.0" width="193.0" height="24" rx="6" fill="#2563EB" fill-opacity="0.85"/>
+<rect x="712.6" y="407.0" width="10" height="38" rx="3" fill="#F59E0B"/>
+<rect x="287.2" y="407.0" width="10" height="38" rx="3" fill="#111827"/>
+<text x="72.0" y="470.0" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="bold" fill="#2563EB" text-anchor="start">stops at once</text>
+<text x="72.0" y="512.0" font-family="Helvetica, Arial, sans-serif" font-size="26" font-weight="bold" fill="#111827" text-anchor="start">rabbitmq:consume</text>
+<text x="326.0" y="512.0" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="normal" fill="#6B7280" text-anchor="start">artisan down, then SIGTERM</text>
+<line x1="292.2" y1="520.0" x2="292.2" y2="564.0" stroke="#111827" stroke-width="2" stroke-dasharray="4 4"/>
+<rect x="99.3" y="530.0" width="771.9" height="24" rx="6" fill="#DC2626" fill-opacity="0.25"/>
+<rect x="712.6" y="523.0" width="10" height="38" rx="3" fill="#F59E0B"/>
+<rect x="866.2" y="523.0" width="10" height="38" rx="3" fill="#111827"/>
+<text x="72.0" y="586.0" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="bold" fill="#DC2626" text-anchor="start">stops 6 s after artisan up</text>
+<text x="72.0" y="628.0" font-family="Helvetica, Arial, sans-serif" font-size="26" font-weight="bold" fill="#111827" text-anchor="start">rabbitmq:consume --force</text>
+<text x="446.0" y="628.0" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="normal" fill="#6B7280" text-anchor="start">artisan down, then SIGTERM</text>
+<line x1="292.2" y1="636.0" x2="292.2" y2="680.0" stroke="#111827" stroke-width="2" stroke-dasharray="4 4"/>
+<rect x="99.3" y="646.0" width="193.0" height="24" rx="6" fill="#2563EB" fill-opacity="0.85"/>
+<rect x="712.6" y="639.0" width="10" height="38" rx="3" fill="#F59E0B"/>
+<rect x="287.2" y="639.0" width="10" height="38" rx="3" fill="#111827"/>
+<text x="72.0" y="702.0" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="bold" fill="#2563EB" text-anchor="start">stops at once</text>
+<text x="72.0" y="744.0" font-family="Helvetica, Arial, sans-serif" font-size="26" font-weight="bold" fill="#111827" text-anchor="start">queue:work</text>
+<text x="236.0" y="744.0" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="normal" fill="#6B7280" text-anchor="start">SIGUSR2, then SIGTERM</text>
+<line x1="292.2" y1="752.0" x2="292.2" y2="796.0" stroke="#111827" stroke-width="2" stroke-dasharray="4 4"/>
+<rect x="99.3" y="762.0" width="193.0" height="24" rx="6" fill="#2563EB" fill-opacity="0.85"/>
+<rect x="718.6" y="755.0" width="10" height="38" rx="3" fill="#F59E0B"/>
+<rect x="287.2" y="755.0" width="10" height="38" rx="3" fill="#111827"/>
+<text x="72.0" y="818.0" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="bold" fill="#2563EB" text-anchor="start">stops at once</text>
+<text x="72.0" y="860.0" font-family="Helvetica, Arial, sans-serif" font-size="26" font-weight="bold" fill="#111827" text-anchor="start">rabbitmq:consume</text>
+<text x="326.0" y="860.0" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="normal" fill="#6B7280" text-anchor="start">SIGUSR2, then SIGTERM</text>
+<line x1="292.2" y1="868.0" x2="292.2" y2="912.0" stroke="#111827" stroke-width="2" stroke-dasharray="4 4"/>
+<rect x="99.3" y="878.0" width="707.8" height="24" rx="6" fill="#DC2626" fill-opacity="0.25"/>
+<rect x="718.6" y="871.0" width="10" height="38" rx="3" fill="#F59E0B"/>
+<rect x="802.0" y="871.0" width="10" height="38" rx="3" fill="#111827"/>
+<text x="72.0" y="934.0" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="bold" fill="#DC2626" text-anchor="start">stops 3 s after SIGCONT</text>
+<text x="72.0" y="976.0" font-family="Helvetica, Arial, sans-serif" font-size="26" font-weight="bold" fill="#111827" text-anchor="start">queue:work</text>
+<text x="236.0" y="976.0" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="normal" fill="#6B7280" text-anchor="start">artisan down, then queue:restart</text>
+<line x1="292.2" y1="984.0" x2="292.2" y2="1028.0" stroke="#111827" stroke-width="2" stroke-dasharray="4 4"/>
+<rect x="99.3" y="994.0" width="246.9" height="24" rx="6" fill="#2563EB" fill-opacity="0.85"/>
+<rect x="715.9" y="987.0" width="10" height="38" rx="3" fill="#F59E0B"/>
+<rect x="341.2" y="987.0" width="10" height="38" rx="3" fill="#111827"/>
+<text x="72.0" y="1050.0" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="bold" fill="#2563EB" text-anchor="start">stops after 2 s and leaves Y1-Y3 in the queue</text>
+<text x="72.0" y="1092.0" font-family="Helvetica, Arial, sans-serif" font-size="26" font-weight="bold" fill="#111827" text-anchor="start">rabbitmq:consume</text>
+<text x="326.0" y="1092.0" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="normal" fill="#6B7280" text-anchor="start">artisan down, then queue:restart</text>
+<line x1="292.2" y1="1100.0" x2="292.2" y2="1144.0" stroke="#111827" stroke-width="2" stroke-dasharray="4 4"/>
+<rect x="99.3" y="1110.0" width="663.2" height="24" rx="6" fill="#DC2626" fill-opacity="0.25"/>
+<rect x="715.9" y="1103.0" width="10" height="38" rx="3" fill="#F59E0B"/>
+<rect x="757.4" y="1103.0" width="10" height="38" rx="3" fill="#111827"/>
+<circle cx="762.5" cy="1122.0" r="9" fill="#DC2626"/>
+<text x="72.0" y="1166.0" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="bold" fill="#DC2626" text-anchor="start">runs Y1 after artisan up, then stops; Y2, Y3 go back</text>
+<line x1="72" y1="1200" x2="1008" y2="1200" stroke="#6B7280" stroke-width="2"/>
+<line x1="154.6" y1="1200" x2="154.6" y2="1210" stroke="#6B7280" stroke-width="2"/>
+<text x="154.6" y="1238.0" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="normal" fill="#6B7280" text-anchor="middle">-5 s</text>
+<line x1="292.2" y1="1200" x2="292.2" y2="1210" stroke="#6B7280" stroke-width="2"/>
+<text x="292.2" y="1238.0" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="normal" fill="#6B7280" text-anchor="middle">0 s</text>
+<line x1="429.9" y1="1200" x2="429.9" y2="1210" stroke="#6B7280" stroke-width="2"/>
+<text x="429.9" y="1238.0" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="normal" fill="#6B7280" text-anchor="middle">5 s</text>
+<line x1="567.5" y1="1200" x2="567.5" y2="1210" stroke="#6B7280" stroke-width="2"/>
+<text x="567.5" y="1238.0" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="normal" fill="#6B7280" text-anchor="middle">10 s</text>
+<line x1="705.2" y1="1200" x2="705.2" y2="1210" stroke="#6B7280" stroke-width="2"/>
+<text x="705.2" y="1238.0" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="normal" fill="#6B7280" text-anchor="middle">15 s</text>
+<line x1="842.8" y1="1200" x2="842.8" y2="1210" stroke="#6B7280" stroke-width="2"/>
+<text x="842.8" y="1238.0" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="normal" fill="#6B7280" text-anchor="middle">20 s</text>
+<line x1="980.5" y1="1200" x2="980.5" y2="1210" stroke="#6B7280" stroke-width="2"/>
+<text x="980.5" y="1238.0" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="normal" fill="#6B7280" text-anchor="middle">25 s</text>
+<rect x="72" y="1262" width="16" height="16" rx="3" fill="#F59E0B"/>
+<text x="98.0" y="1277.0" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="normal" fill="#6B7280" text-anchor="start">artisan up or SIGCONT</text>
+<circle cx="432.0" cy="1270.0" r="8" fill="#DC2626"/>
+<text x="448.0" y="1277.0" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="normal" fill="#6B7280" text-anchor="start">a job that came in during the deploy</text>
+<text x="72.0" y="1318.0" font-family="Helvetica, Arial, sans-serif" font-size="22" font-weight="normal" fill="#6B7280" text-anchor="start">One local run of github.com/skybleak333/laravel-queue-lab, 16 Oct 2026</text>
+</svg>
