@@ -9,6 +9,7 @@ use Illuminate\Queue\Events\JobPopping;
 use Illuminate\Queue\Events\WorkerPausing;
 use Illuminate\Queue\Events\WorkerQueuePaused;
 use Illuminate\Queue\Events\WorkerStopping;
+use Illuminate\Queue\Worker;
 use Orchestra\Testbench\Foundation\Application;
 use RuntimeException;
 use Throwable;
@@ -104,6 +105,11 @@ final class Lab
             $handler->reportable(static function (Throwable $e): void {
                 EventLog::write('exception', ['class' => $e::class, 'code' => $e->getCode(), 'message' => $e->getMessage()]);
             });
+        }
+
+        // LAB_KILL_ON_TIMEOUT=0: a timed-out job throws inside the worker instead of killing it.
+        if (getenv('LAB_KILL_ON_TIMEOUT') === '0') {
+            Worker::$killOnTimeout = false;
         }
 
         $app['events']->listen(JobDebounced::class, static function (JobDebounced $event): void {

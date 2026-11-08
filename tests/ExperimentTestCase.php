@@ -3,6 +3,7 @@
 namespace Lab\Tests;
 
 use Lab\EventLog;
+use PDO;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
@@ -23,6 +24,23 @@ abstract class ExperimentTestCase extends TestCase
         }
 
         return $dir;
+    }
+
+    /**
+     * An SQLite file with Laravel's jobs table, for the experiments on the database queue
+     * (LAB_DATABASE). It replaces the file of an earlier run.
+     */
+    protected static function sqliteQueue(string $dir): string
+    {
+        $file = $dir.'/queue.sqlite';
+        @unlink($file);
+
+        $pdo = new PDO('sqlite:'.$file);
+        $pdo->exec('PRAGMA journal_mode=WAL');
+        $pdo->exec('CREATE TABLE jobs (id INTEGER PRIMARY KEY AUTOINCREMENT, queue VARCHAR NOT NULL, payload TEXT NOT NULL, attempts INTEGER NOT NULL, reserved_at INTEGER NULL, available_at INTEGER NOT NULL, created_at INTEGER NOT NULL)');
+        $pdo->exec('CREATE INDEX jobs_queue_index ON jobs (queue)');
+
+        return $file;
     }
 
     protected static function waitForBroker(): void

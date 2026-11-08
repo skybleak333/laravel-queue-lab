@@ -4,7 +4,6 @@ namespace Lab\Tests;
 
 use Lab\DebouncedJob;
 use Lab\EventLog;
-use PDO;
 
 /**
  * Laravel 13 debounce with maxWait, under a steady stream of dispatches.
@@ -30,7 +29,7 @@ final class DebounceMaxWaitTest extends ExperimentTestCase
         $dir = self::logDirectory('debounce');
         // Debounce state lives in the file cache: start without any from an earlier run.
         exec('rm -rf '.escapeshellarg($dir.'/storage').' '.escapeshellarg($dir).'/*.jsonl');
-        $env = ['LAB_DATABASE' => self::database($dir), 'LAB_STORAGE' => $dir.'/storage'];
+        $env = ['LAB_DATABASE' => self::sqliteQueue($dir), 'LAB_STORAGE' => $dir.'/storage'];
 
         $worker = self::start(
             ['artisan', 'queue:work', 'database', '--queue=debounce', '--sleep='.self::SLEEP, '--tries=1'],
@@ -75,21 +74,5 @@ final class DebounceMaxWaitTest extends ExperimentTestCase
         // one --sleep of the worker and the job itself.
         $this->assertGreaterThan(0, $forcedDiscarded);
         $this->assertGreaterThan(DebouncedJob::MAX_WAIT + self::SLEEP + 1, $longestGap);
-    }
-
-    /**
-     * An SQLite file with Laravel's jobs table.
-     */
-    private static function database(string $dir): string
-    {
-        $file = $dir.'/queue.sqlite';
-        @unlink($file);
-
-        $pdo = new PDO('sqlite:'.$file);
-        $pdo->exec('PRAGMA journal_mode=WAL');
-        $pdo->exec('CREATE TABLE jobs (id INTEGER PRIMARY KEY AUTOINCREMENT, queue VARCHAR NOT NULL, payload TEXT NOT NULL, attempts INTEGER NOT NULL, reserved_at INTEGER NULL, available_at INTEGER NOT NULL, created_at INTEGER NOT NULL)');
-        $pdo->exec('CREATE INDEX jobs_queue_index ON jobs (queue)');
-
-        return $file;
     }
 }

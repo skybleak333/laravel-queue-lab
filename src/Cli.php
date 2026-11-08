@@ -13,6 +13,7 @@ use Throwable;
  * bin/lab size <queue>            print the number of ready messages
  * bin/lab artisan <command> ...   run an Artisan command, e.g. artisan queue:work rabbitmq --queue=q
  * bin/lab debounce <seconds> <ms> dispatch DebouncedJob to the database queue every <ms> ms
+ * bin/lab max-exceptions <queue>  dispatch MaxExceptionsJob "timeout" and "throw" to the database queue
  */
 final class Cli
 {
@@ -37,6 +38,14 @@ final class Cli
                 EventLog::write('debounce.dispatch', ['dispatched_at' => $job->dispatchedAt, 'forced' => $job->delay === 0]);
 
                 usleep($interval * 1000);
+            }
+
+            return 0;
+        }
+
+        if (($argv[1] ?? '') === 'max-exceptions') {
+            foreach (['timeout', 'throw'] as $mode) {
+                MaxExceptionsJob::dispatch($mode, $mode)->onConnection('database')->onQueue($argv[2] ?? 'default');
             }
 
             return 0;
@@ -81,7 +90,7 @@ final class Cli
                 return $status;
 
             default:
-                fwrite(STDERR, "usage: bin/lab push <queue> <job>... | size <queue> | artisan <command> ... | debounce <seconds> <ms>\n");
+                fwrite(STDERR, "usage: bin/lab push <queue> <job>... | size <queue> | artisan <command> ... | debounce <seconds> <ms> | max-exceptions <queue>\n");
 
                 return 2;
         }

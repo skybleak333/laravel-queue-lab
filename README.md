@@ -10,9 +10,10 @@ What the experiments found, with `queue:work` and `rabbitmq:consume` from [vyuld
 - **[The broker stops answering.](#experiment-2-a-broker-that-stops-answering)** With the default timeouts, `queue:work` waits until the broker is back, even with heartbeats on, and `--timeout` doesn't help. `rabbitmq:consume` doesn't notice at all.
 - **[A worker is paused or the app is in maintenance mode.](#experiment-3-a-worker-that-is-paused-or-in-maintenance-mode)** `rabbitmq:consume` ignores SIGTERM and `queue:restart` until the pause ends, then runs one more job before it stops. While it is paused, it holds messages that other workers can't take, and it ignores `queue:pause`. `queue:work` stops at once on SIGTERM and within `--sleep` on `queue:restart`.
 
-And one about Laravel's own queue, on the database driver:
+And two about Laravel's own queue, on the database driver:
 
 - **[Debounce with `maxWait` under steady dispatches.](#experiment-4-debounce-with-maxwait-under-steady-dispatches)** On Laravel 13.37 the job that `maxWait` forces to run is discarded as superseded when the next dispatch comes first. With a dispatch every 0.5 s and `maxWait: 6`, the job didn't run once in 60 s.
+- **[`maxExceptions` with a timeout, when the worker isn't killed.](#experiment-5-maxexceptions-and-a-timeout-without-killing-the-worker)** With `Worker::$killOnTimeout = false`, one timeout counts as two exceptions: a job with `maxExceptions = 2` fails after its first timeout.
 
 ## Experiment 1: a job that outlives RabbitMQ's acknowledgement timeout
 
@@ -209,9 +210,41 @@ Laravel 13 can debounce a job: `#[DebounceFor(2, maxWait: 6)]` runs it once disp
 - The database driver with SQLite and the file cache, one worker. The mechanism doesn't depend on the driver: the check is in `CallQueuedHandler`, and a run on Redis with Horizon showed it too.
 - Laravel 13.37 with Testbench. The CI test checks the released behaviour: when Laravel fixes it, the test will fail and say so.
 
+## Experiment 5: maxExceptions and a timeout, without killing the worker
+
+By default a job that runs past its timeout kills the worker. Since [laravel/framework#61591](https://github.com/laravel/framework/pull/61591) (13.x, September 2026), `Worker::$killOnTimeout = false` keeps the worker alive and throws a `TimeoutExceededException` into the job instead. How does that count against `maxExceptions`?
+
+### Setup
+
+- One job with `$tries = 5`, `$maxExceptions = 2` and `$timeout = 1`, in two variants: "timeout" sleeps 3 s on every attempt, "throw" throws a `RuntimeException` on every attempt.
+- One `queue:work --stop-when-empty` with `Worker::$killOnTimeout = false`, on the database queue. No broker.
+
+### Result
+
+| | Laravel 13.37 | With the fix |
+|---|---|---|
+| "throw" fails after | 2 attempts | 2 attempts |
+| "timeout" fails after | 1 attempt | 2 attempts |
+
+"With the fix" is the change from [`fix/timeout-exception-count`](https://github.com/skybleak333/framework/tree/fix/timeout-exception-count) applied to `vendor/`. It isn't in Laravel.
+
+### Why
+
+The worker's SIGALRM handler counts the timeout against `maxExceptions` and then, with `killOnTimeout` off, throws the exception into the job. The exception comes out of the job, and the worker's usual exception handling counts it again. So the second "exception" is the same timeout.
+
+### What helps
+
+- Set `maxExceptions` one higher than you mean, for jobs that may time out under `killOnTimeout = false`, or count timeouts with `tries` instead.
+- The fix in the branch counts the timeout only once, in the worker's exception handling. The path that kills the worker doesn't change.
+
+### Limits
+
+- Laravel 13.37, the database driver. The double count is in `Worker`, so it doesn't depend on the driver.
+- A job or a middleware that catches the `TimeoutExceededException` itself (like `ThrottlesExceptions`) isn't covered.
+
 ## Run it
 
-Requirements: PHP 8.3+ with `pcntl`, `sockets` and `pdo_sqlite`, Composer and Docker. Experiment 4 needs no broker: `vendor/bin/phpunit tests/DebounceMaxWaitTest.php` runs it alone.
+Requirements: PHP 8.3+ with `pcntl`, `sockets` and `pdo_sqlite`, Composer and Docker. Experiments 4 and 5 need no broker: `vendor/bin/phpunit tests/DebounceMaxWaitTest.php tests/MaxExceptionsTimeoutTest.php` runs them alone.
 
 ```bash
 docker compose up -d --wait   # RabbitMQ on 127.0.0.1:5672
@@ -220,7 +253,7 @@ composer test                 # about 7 minutes
 docker compose down -v
 ```
 
-`LAB_AMQP_PORT` changes the port. Experiment 2 freezes the broker with `docker compose pause rabbitmq`, so it needs the broker from `compose.yaml`. The workers write one JSON event per line to a temporary directory; experiments 2 and 3 also write their timings to `results.json` there. Every experiment gives its workers a storage directory of their own (`LAB_STORAGE`) for the maintenance flag and the file cache. If you stop a run with Ctrl+C, the experiments kill their workers; should one survive, `pkill -f 'bin/lab artisan'` stops it. [`tests/AckTimeoutTest.php`](tests/AckTimeoutTest.php), [`tests/FrozenBrokerTest.php`](tests/FrozenBrokerTest.php), [`tests/PausedWorkerTest.php`](tests/PausedWorkerTest.php) and [`tests/DebounceMaxWaitTest.php`](tests/DebounceMaxWaitTest.php) show what is checked. `LAB_HEARTBEAT`, `LAB_IO_TIMEOUT`, `LAB_RPC_TIMEOUT` and `LAB_STORAGE` set the connection options and the storage directory of a process run by hand; the experiments set their own. `bin/lab artisan` treats a failing command like `php artisan` in an application: the exception is reported and printed, and the exit code is 1. To run a worker by hand:
+`LAB_AMQP_PORT` changes the port. Experiment 2 freezes the broker with `docker compose pause rabbitmq`, so it needs the broker from `compose.yaml`. The workers write one JSON event per line to a temporary directory; experiments 2 and 3 also write their timings to `results.json` there. Every experiment gives its workers a storage directory of their own (`LAB_STORAGE`) for the maintenance flag and the file cache. If you stop a run with Ctrl+C, the experiments kill their workers; should one survive, `pkill -f 'bin/lab artisan'` stops it. [`tests/AckTimeoutTest.php`](tests/AckTimeoutTest.php), [`tests/FrozenBrokerTest.php`](tests/FrozenBrokerTest.php), [`tests/PausedWorkerTest.php`](tests/PausedWorkerTest.php), [`tests/DebounceMaxWaitTest.php`](tests/DebounceMaxWaitTest.php) and [`tests/MaxExceptionsTimeoutTest.php`](tests/MaxExceptionsTimeoutTest.php) show what is checked. `LAB_HEARTBEAT`, `LAB_IO_TIMEOUT`, `LAB_RPC_TIMEOUT` and `LAB_STORAGE` set the connection options and the storage directory of a process run by hand; the experiments set their own. `bin/lab artisan` treats a failing command like `php artisan` in an application: the exception is reported and printed, and the exit code is 1. To run a worker by hand:
 
 ```bash
 export LAB_EVENT_LOG=/tmp/events.jsonl
