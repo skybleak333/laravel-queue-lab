@@ -12,6 +12,7 @@ use Throwable;
  * bin/lab push <queue> <job>...   push jobs, job = name[:seconds], e.g. A:150 B C
  * bin/lab size <queue>            print the number of ready messages
  * bin/lab artisan <command> ...   run an Artisan command, e.g. artisan queue:work rabbitmq --queue=q
+ * bin/lab debounce <seconds> <ms> dispatch DebouncedJob to the database queue every <ms> ms
  */
 final class Cli
 {
@@ -21,10 +22,30 @@ final class Cli
     public static function run(array $argv): int
     {
         $app = Lab::app();
-        $queue = $app['queue']->connection('rabbitmq');
+
+        if (($argv[1] ?? '') === 'debounce') {
+            $end = microtime(true) + (float) ($argv[2] ?? 60);
+            $interval = (int) ($argv[3] ?? 500);
+
+            while (microtime(true) < $end) {
+                // The pending dispatch takes the debounce lock and sets the delay when it is
+                // destroyed, so it is unset before the delay is read.
+                $pending = DebouncedJob::dispatch(microtime(true))->onConnection('database')->onQueue('debounce');
+                $job = $pending->getJob();
+                unset($pending);
+
+                EventLog::write('debounce.dispatch', ['dispatched_at' => $job->dispatchedAt, 'forced' => $job->delay === 0]);
+
+                usleep($interval * 1000);
+            }
+
+            return 0;
+        }
 
         switch ($argv[1] ?? '') {
             case 'push':
+                $queue = $app['queue']->connection('rabbitmq');
+
                 foreach (array_slice($argv, 3) as $spec) {
                     [$name, $seconds] = array_pad(explode(':', $spec, 2), 2, '0');
 
@@ -34,7 +55,7 @@ final class Cli
                 return 0;
 
             case 'size':
-                echo $queue->size($argv[2]), PHP_EOL;
+                echo $app['queue']->connection('rabbitmq')->size($argv[2]), PHP_EOL;
 
                 return 0;
 
@@ -60,7 +81,7 @@ final class Cli
                 return $status;
 
             default:
-                fwrite(STDERR, "usage: bin/lab push <queue> <job>... | size <queue> | artisan <command> ...\n");
+                fwrite(STDERR, "usage: bin/lab push <queue> <job>... | size <queue> | artisan <command> ... | debounce <seconds> <ms>\n");
 
                 return 2;
         }

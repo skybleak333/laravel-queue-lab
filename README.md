@@ -2,13 +2,17 @@
 
 [![experiments](https://github.com/skybleak333/laravel-queue-lab/actions/workflows/experiments.yml/badge.svg)](https://github.com/skybleak333/laravel-queue-lab/actions/workflows/experiments.yml)
 
-Reproducible experiments with Laravel queue workers against a real message broker. Each experiment is a PHPUnit test that starts real workers, records what they do and checks the result, so you can rerun it on your own versions. CI reruns them every week.
+Reproducible experiments with Laravel queue workers, mostly against a real message broker. Each experiment is a PHPUnit test that starts real workers, records what they do and checks the result, so you can rerun it on your own versions. CI reruns them every week.
 
 What the experiments found, with `queue:work` and `rabbitmq:consume` from [vyuldashev/laravel-queue-rabbitmq](https://github.com/vyuldashev/laravel-queue-rabbitmq):
 
 - **[A job outlives RabbitMQ's acknowledgement timeout.](#experiment-1-a-job-that-outlives-rabbitmqs-acknowledgement-timeout)** The workers don't hang: they exit with code 0, and the job runs twice. With `rabbitmq:consume` and the default prefetch, the jobs already in the client buffer run twice too.
 - **[The broker stops answering.](#experiment-2-a-broker-that-stops-answering)** With the default timeouts, `queue:work` waits until the broker is back, even with heartbeats on, and `--timeout` doesn't help. `rabbitmq:consume` doesn't notice at all.
 - **[A worker is paused or the app is in maintenance mode.](#experiment-3-a-worker-that-is-paused-or-in-maintenance-mode)** `rabbitmq:consume` ignores SIGTERM and `queue:restart` until the pause ends, then runs one more job before it stops. While it is paused, it holds messages that other workers can't take, and it ignores `queue:pause`. `queue:work` stops at once on SIGTERM and within `--sleep` on `queue:restart`.
+
+And one about Laravel's own queue, on the database driver:
+
+- **[Debounce with `maxWait` under steady dispatches.](#experiment-4-debounce-with-maxwait-under-steady-dispatches)** On Laravel 13.37 the job that `maxWait` forces to run is discarded as superseded when the next dispatch comes first. With a dispatch every 0.5 s and `maxWait: 6`, the job didn't run once in 60 s.
 
 ## Experiment 1: a job that outlives RabbitMQ's acknowledgement timeout
 
@@ -166,18 +170,57 @@ On these versions `queue:restart` does restart an idle `rabbitmq:consume`, so #5
 - Maintenance mode with the default file driver.
 - The same versions as experiments 1 and 2. #587 was reported on Laravel 9 with package 13.3.5; those versions weren't tested.
 
+## Experiment 4: debounce with maxWait under steady dispatches
+
+Laravel 13 can debounce a job: `#[DebounceFor(2, maxWait: 6)]` runs it once dispatches stop for 2 s, and `maxWait` should make it run at least every 6 s while they keep coming. The [docs](https://laravel.com/docs/13.x/queues#debounced-jobs) use it for a search index update after product changes, and `maxWait` to "cap how long a frequently re-dispatched job can be deferred". Does the cap hold?
+
+### Setup
+
+- One debounced job, dispatched every 0.5 s for 60 s, to the database queue (SQLite) with the file cache. One `queue:work --sleep=3`, Laravel's default sleep. The job itself takes 0.3 s.
+- The dispatcher logs whether `maxWait` forced each dispatch (Laravel queues a forced job with no delay). The worker logs every run and every `JobDebounced` event.
+- No broker is involved.
+
+### Result
+
+| | Laravel 13.37 | With the fix |
+|---|---|---|
+| Dispatches forced by `maxWait` | 9 | 10 |
+| Forced jobs discarded as superseded | 9 | 0 |
+| Runs while dispatching | 0 | 9 |
+| Longest wait without a run | 60 s | 7 s |
+
+<img src="docs/debounce.png" alt="Timeline: on Laravel 13.37 all nine forced jobs are discarded and the job runs only after dispatching stops; with the fix it runs every 6 to 7 seconds" width="540">
+
+"With the fix" is the same run with the change from [`fix/debounce-forced-job`](https://github.com/skybleak333/framework/tree/fix/debounce-forced-job) applied to `vendor/`. It isn't in Laravel. An earlier run on a fresh `laravel/laravel` app with `#[DebounceFor(10, maxWait: 30)]` and a dispatch every second for 5 minutes gave the same picture: 3 runs and a longest wait of 124 s, against 9 runs and 33 s with the fix.
+
+### Why
+
+- Every dispatch of a debounced job writes a new owner token to the cache and queues the job with a delay. When the job runs, it compares its token with the current one, and if they differ it is deleted as superseded (`JobDebounced`).
+- When `maxWait` has passed since the first dispatch of the window, the job is queued with no delay instead. But it still waits for the worker like any other job: up to `--sleep` on an empty queue, or behind the jobs ahead of it. If another dispatch comes in meanwhile, the token changes, and the forced job is discarded like the others. The window starts again, and the same thing happens next time.
+- So the cap only works when dispatches are rarer than the worker picks up jobs, which is exactly when you don't need it.
+
+### What helps
+
+- The fix in the branch marks a forced job and skips the superseded check on its first attempt. A retry is still checked, so an old retry can't run after a newer dispatch.
+- Until that is in Laravel: a scheduled job that does the work every N seconds is a cap that holds. A shorter `--sleep` makes discards rarer but doesn't remove them.
+
+### Limits
+
+- The database driver with SQLite and the file cache, one worker. The mechanism doesn't depend on the driver: the check is in `CallQueuedHandler`, and a run on Redis with Horizon showed it too.
+- Laravel 13.37 with Testbench. The CI test checks the released behaviour: when Laravel fixes it, the test will fail and say so.
+
 ## Run it
 
-Requirements: PHP 8.3+ with `pcntl` and `sockets`, Composer and Docker.
+Requirements: PHP 8.3+ with `pcntl`, `sockets` and `pdo_sqlite`, Composer and Docker. Experiment 4 needs no broker: `vendor/bin/phpunit tests/DebounceMaxWaitTest.php` runs it alone.
 
 ```bash
 docker compose up -d --wait   # RabbitMQ on 127.0.0.1:5672
 composer update
-composer test                 # about 6 minutes
+composer test                 # about 7 minutes
 docker compose down -v
 ```
 
-`LAB_AMQP_PORT` changes the port. Experiment 2 freezes the broker with `docker compose pause rabbitmq`, so it needs the broker from `compose.yaml`. The workers write one JSON event per line to a temporary directory; experiments 2 and 3 also write their timings to `results.json` there. Every experiment gives its workers a storage directory of their own (`LAB_STORAGE`) for the maintenance flag and the file cache. If you stop a run with Ctrl+C, the experiments kill their workers; should one survive, `pkill -f 'bin/lab artisan'` stops it. [`tests/AckTimeoutTest.php`](tests/AckTimeoutTest.php), [`tests/FrozenBrokerTest.php`](tests/FrozenBrokerTest.php) and [`tests/PausedWorkerTest.php`](tests/PausedWorkerTest.php) show what is checked. `LAB_HEARTBEAT`, `LAB_IO_TIMEOUT`, `LAB_RPC_TIMEOUT` and `LAB_STORAGE` set the connection options and the storage directory of a process run by hand; the experiments set their own. `bin/lab artisan` treats a failing command like `php artisan` in an application: the exception is reported and printed, and the exit code is 1. To run a worker by hand:
+`LAB_AMQP_PORT` changes the port. Experiment 2 freezes the broker with `docker compose pause rabbitmq`, so it needs the broker from `compose.yaml`. The workers write one JSON event per line to a temporary directory; experiments 2 and 3 also write their timings to `results.json` there. Every experiment gives its workers a storage directory of their own (`LAB_STORAGE`) for the maintenance flag and the file cache. If you stop a run with Ctrl+C, the experiments kill their workers; should one survive, `pkill -f 'bin/lab artisan'` stops it. [`tests/AckTimeoutTest.php`](tests/AckTimeoutTest.php), [`tests/FrozenBrokerTest.php`](tests/FrozenBrokerTest.php), [`tests/PausedWorkerTest.php`](tests/PausedWorkerTest.php) and [`tests/DebounceMaxWaitTest.php`](tests/DebounceMaxWaitTest.php) show what is checked. `LAB_HEARTBEAT`, `LAB_IO_TIMEOUT`, `LAB_RPC_TIMEOUT` and `LAB_STORAGE` set the connection options and the storage directory of a process run by hand; the experiments set their own. `bin/lab artisan` treats a failing command like `php artisan` in an application: the exception is reported and printed, and the exit code is 1. To run a worker by hand:
 
 ```bash
 export LAB_EVENT_LOG=/tmp/events.jsonl

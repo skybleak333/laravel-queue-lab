@@ -4,6 +4,7 @@ namespace Lab;
 
 use Illuminate\Contracts\Debug\ExceptionHandler;
 use Illuminate\Foundation\Application as LaravelApplication;
+use Illuminate\Queue\Events\JobDebounced;
 use Illuminate\Queue\Events\JobPopping;
 use Illuminate\Queue\Events\WorkerPausing;
 use Illuminate\Queue\Events\WorkerQueuePaused;
@@ -49,6 +50,34 @@ final class Lab
         ]);
         $config->set('logging.default', 'null');
 
+        // LAB_DATABASE: an SQLite file for the database queue driver, for experiments that are
+        // about Laravel's queue rather than the broker. The test creates the jobs table.
+        $database = getenv('LAB_DATABASE');
+
+        if (is_string($database) && $database !== '') {
+            $config->set('database.default', 'lab');
+            $config->set('database.connections.lab', [
+                'driver' => 'sqlite',
+                'database' => $database,
+                'prefix' => '',
+                'foreign_key_constraints' => false,
+                'busy_timeout' => 5000,
+                'journal_mode' => 'wal',
+                // The dispatcher and the worker write to the same file. A deferred transaction
+                // that has to upgrade its lock fails at once with "database is locked"; an
+                // immediate one waits for busy_timeout instead.
+                'transaction_mode' => 'IMMEDIATE',
+            ]);
+            $config->set('queue.connections.database', [
+                'driver' => 'database',
+                'connection' => 'lab',
+                'table' => 'jobs',
+                'queue' => 'default',
+                'retry_after' => 90,
+                'after_commit' => false,
+            ]);
+        }
+
         // LAB_STORAGE gives the processes of one experiment a storage directory of their own:
         // the maintenance mode flag (artisan down) and the file cache that queue:restart writes
         // to are then shared by the workers and the commands that signal them.
@@ -76,6 +105,12 @@ final class Lab
                 EventLog::write('exception', ['class' => $e::class, 'code' => $e->getCode(), 'message' => $e->getMessage()]);
             });
         }
+
+        $app['events']->listen(JobDebounced::class, static function (JobDebounced $event): void {
+            if ($event->command instanceof DebouncedJob) {
+                EventLog::write('debounce.discarded', ['dispatched_at' => $event->command->dispatchedAt, 'forced' => $event->command->delay === 0]);
+            }
+        });
 
         // A worker that pops a job is not paused; these events show which workers were.
         $app['events']->listen(JobPopping::class, static fn () => EventLog::write('job.popping'));
