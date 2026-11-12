@@ -43,6 +43,12 @@ final class Cli
             return 0;
         }
 
+        if (($argv[1] ?? '') === 'agent-failover') {
+            AgentJob::dispatch()->onConnection('database')->onQueue($argv[2] ?? 'default');
+
+            return 0;
+        }
+
         if (($argv[1] ?? '') === 'max-exceptions') {
             foreach (['timeout', 'throw'] as $mode) {
                 MaxExceptionsJob::dispatch($mode, $mode)->onConnection('database')->onQueue($argv[2] ?? 'default');
@@ -90,7 +96,7 @@ final class Cli
                 return $status;
 
             default:
-                fwrite(STDERR, "usage: bin/lab push <queue> <job>... | size <queue> | artisan <command> ... | debounce <seconds> <ms> | max-exceptions <queue>\n");
+                fwrite(STDERR, "usage: bin/lab push <queue> <job>... | size <queue> | artisan <command> ... | debounce <seconds> <ms> | max-exceptions <queue> | agent-failover <queue>\n");
 
                 return 2;
         }

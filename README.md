@@ -15,6 +15,10 @@ And two about Laravel's own queue, on the database driver:
 - **[Debounce with `maxWait` under steady dispatches.](#experiment-4-debounce-with-maxwait-under-steady-dispatches)** On Laravel 13.37 the job that `maxWait` forces to run is discarded as superseded when the next dispatch comes first. With a dispatch every 0.5 s and `maxWait: 6`, the job didn't run once in 60 s.
 - **[`maxExceptions` with a timeout, when the worker isn't killed.](#experiment-5-maxexceptions-and-a-timeout-without-killing-the-worker)** With `Worker::$killOnTimeout = false`, one timeout counts as two exceptions: a job with `maxExceptions = 2` fails after its first timeout.
 
+And one about an AI agent in a queued job:
+
+- **[An agent's tool after a provider failover.](#experiment-6-an-agents-tool-after-a-provider-failover)** With the Laravel AI SDK 1.4.0, an agent that has run a tool and then gets a 429 from its primary provider starts over on the backup, and the tool runs a second time. The job succeeds, so the queue shows nothing.
+
 ## Experiment 1: a job that outlives RabbitMQ's acknowledgement timeout
 
 RabbitMQ closes a channel with `PRECONDITION_FAILED` (406) when a delivery stays unacknowledged for longer than [`consumer_timeout`](https://www.rabbitmq.com/docs/consumers#acknowledgement-timeout), 30 minutes by default. What do `php artisan queue:work` and `php artisan rabbitmq:consume` from [vyuldashev/laravel-queue-rabbitmq](https://github.com/vyuldashev/laravel-queue-rabbitmq) do when a job runs longer than that?
@@ -242,9 +246,45 @@ The worker's SIGALRM handler counts the timeout against `maxExceptions` and then
 - Laravel 13.37, the database driver. The double count is in `Worker`, so it doesn't depend on the driver.
 - A job or a middleware that catches the `TimeoutExceededException` itself (like `ThrottlesExceptions`) isn't covered.
 
+## Experiment 6: an agent's tool after a provider failover
+
+The [Laravel AI SDK](https://github.com/laravel/ai) takes a list of providers: with `prompt('...', provider: ['primary', 'backup'])` an agent moves to the next provider when one fails with a rate limit or an overload. Agents usually run in queued jobs, and their tools often have side effects: an email, a payment, a row in a database. What happens when the provider fails after the agent has already run a tool?
+
+### Setup
+
+- laravel/ai 1.4.0. An agent with one tool, `SendInvoiceEmail`, that records each run ([`src/SendInvoiceEmail.php`](src/SendInvoiceEmail.php)). It runs in a queued job with `$tries = 1` ([`src/AgentJob.php`](src/AgentJob.php)), through `queue:work --stop-when-empty` on the database queue.
+- Both providers use the `groq` driver, pointed at a fake OpenAI-compatible server ([`bin/fake-ai-provider.php`](bin/fake-ai-provider.php)). The primary answers the first step with a call of the tool and the second with 429. The backup answers with a call of the tool, then with the final text. No real model and no API key.
+
+### Result
+
+| | laravel/ai 1.4.0 | With the fix |
+|---|---|---|
+| `SendInvoiceEmail` runs | 2 | 1 |
+| Requests to the primary / the backup | 2 / 2 | 2 / 0 |
+| The job | succeeds with the backup's answer | fails with `RateLimitedException` |
+
+"With the fix" is the change from [`fix/no-failover-after-tools`](https://github.com/skybleak333/ai/tree/fix/no-failover-after-tools) applied to `vendor/`. It isn't in laravel/ai.
+
+The job succeeds, so the queue and the failed jobs table show nothing, and the rate limit isn't reported to the exception handler: the only trace of the second invoice is the `AgentFailedOver` event.
+
+### Why
+
+`Promptable::prompt()` runs through `withModelFailover()`, which catches the `RateLimitedException` of the second step and starts the whole prompt over on the next provider. The new run knows nothing of the tool call of the first one, so the model asks for the tool again. `stream()` already refuses to fail over once it has sent output (`hasYielded()` in `Promptable::streamPrompt()`); `prompt()` has no such check.
+
+### What helps
+
+- Make tools with side effects idempotent: key the email or the payment by something a repeated run gives again, such as the order and the invoice number. A retry of the queued job runs the agent from the start as well, so this is needed for retries anyway.
+- Or give an agent whose tools have side effects one provider, so that a failure ends the run and the job's retry policy decides.
+- The fix in the branch stops the failover once the attempt has run a tool; a failure before the first tool still moves to the backup. It also blocks the failover after a read-only tool, since the SDK can't tell which tools are safe to repeat.
+
+### Limits
+
+- laravel/ai 1.4.0 on Laravel 13, the `groq` driver. The failover is in `Promptable`, so the driver doesn't matter.
+- `stream()`, sub-agents and the SDK's own `->queue()` aren't covered here. The branch's tests also check a sub-agent that ran a tool.
+
 ## Run it
 
-Requirements: PHP 8.3+ with `pcntl`, `sockets` and `pdo_sqlite`, Composer and Docker. Experiments 4 and 5 need no broker: `vendor/bin/phpunit tests/DebounceMaxWaitTest.php tests/MaxExceptionsTimeoutTest.php` runs them alone.
+Requirements: PHP 8.3+ with `pcntl`, `sockets` and `pdo_sqlite`, Composer and Docker. Experiments 4, 5 and 6 need no broker: `vendor/bin/phpunit tests/DebounceMaxWaitTest.php tests/MaxExceptionsTimeoutTest.php tests/AgentFailoverTest.php` runs them alone.
 
 ```bash
 docker compose up -d --wait   # RabbitMQ on 127.0.0.1:5672
@@ -253,7 +293,7 @@ composer test                 # about 7 minutes
 docker compose down -v
 ```
 
-`LAB_AMQP_PORT` changes the port. Experiment 2 freezes the broker with `docker compose pause rabbitmq`, so it needs the broker from `compose.yaml`. The workers write one JSON event per line to a temporary directory; experiments 2 and 3 also write their timings to `results.json` there. Every experiment gives its workers a storage directory of their own (`LAB_STORAGE`) for the maintenance flag and the file cache. If you stop a run with Ctrl+C, the experiments kill their workers; should one survive, `pkill -f 'bin/lab artisan'` stops it. [`tests/AckTimeoutTest.php`](tests/AckTimeoutTest.php), [`tests/FrozenBrokerTest.php`](tests/FrozenBrokerTest.php), [`tests/PausedWorkerTest.php`](tests/PausedWorkerTest.php), [`tests/DebounceMaxWaitTest.php`](tests/DebounceMaxWaitTest.php) and [`tests/MaxExceptionsTimeoutTest.php`](tests/MaxExceptionsTimeoutTest.php) show what is checked. `LAB_HEARTBEAT`, `LAB_IO_TIMEOUT`, `LAB_RPC_TIMEOUT` and `LAB_STORAGE` set the connection options and the storage directory of a process run by hand; the experiments set their own. `bin/lab artisan` treats a failing command like `php artisan` in an application: the exception is reported and printed, and the exit code is 1. To run a worker by hand:
+`LAB_AMQP_PORT` changes the port. Experiment 2 freezes the broker with `docker compose pause rabbitmq`, so it needs the broker from `compose.yaml`. The workers write one JSON event per line to a temporary directory; experiments 2 and 3 also write their timings to `results.json` there. Every experiment gives its workers a storage directory of their own (`LAB_STORAGE`) for the maintenance flag and the file cache. If you stop a run with Ctrl+C, the experiments kill their workers; should one survive, `pkill -f 'bin/lab artisan'` stops it. [`tests/AckTimeoutTest.php`](tests/AckTimeoutTest.php), [`tests/FrozenBrokerTest.php`](tests/FrozenBrokerTest.php), [`tests/PausedWorkerTest.php`](tests/PausedWorkerTest.php), [`tests/DebounceMaxWaitTest.php`](tests/DebounceMaxWaitTest.php), [`tests/MaxExceptionsTimeoutTest.php`](tests/MaxExceptionsTimeoutTest.php) and [`tests/AgentFailoverTest.php`](tests/AgentFailoverTest.php) show what is checked. `LAB_HEARTBEAT`, `LAB_IO_TIMEOUT`, `LAB_RPC_TIMEOUT` and `LAB_STORAGE` set the connection options and the storage directory of a process run by hand; the experiments set their own. `bin/lab artisan` treats a failing command like `php artisan` in an application: the exception is reported and printed, and the exit code is 1. To run a worker by hand:
 
 ```bash
 export LAB_EVENT_LOG=/tmp/events.jsonl

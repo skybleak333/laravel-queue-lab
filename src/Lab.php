@@ -10,6 +10,8 @@ use Illuminate\Queue\Events\WorkerPausing;
 use Illuminate\Queue\Events\WorkerQueuePaused;
 use Illuminate\Queue\Events\WorkerStopping;
 use Illuminate\Queue\Worker;
+use Laravel\Ai\AiServiceProvider;
+use Laravel\Ai\Events\AgentFailedOver;
 use Orchestra\Testbench\Foundation\Application;
 use RuntimeException;
 use Throwable;
@@ -25,7 +27,7 @@ final class Lab
     public static function app(): LaravelApplication
     {
         $app = Application::create(
-            options: ['extra' => ['providers' => [LaravelQueueRabbitMQServiceProvider::class]]],
+            options: ['extra' => ['providers' => [LaravelQueueRabbitMQServiceProvider::class, AiServiceProvider::class]]],
         );
 
         // Testbench calls its resolving callback before the configuration is loaded, so the
@@ -79,6 +81,16 @@ final class Lab
             ]);
         }
 
+        // LAB_AI_URL: the fake OpenAI-compatible server of experiment 6 (bin/fake-ai-provider.php),
+        // as two providers of the Laravel AI SDK, a primary and a backup.
+        $aiUrl = getenv('LAB_AI_URL');
+
+        if (is_string($aiUrl) && $aiUrl !== '') {
+            foreach (['primary', 'backup'] as $provider) {
+                $config->set("ai.providers.{$provider}", ['driver' => 'groq', 'key' => 'lab', 'url' => "{$aiUrl}/{$provider}"]);
+            }
+        }
+
         // LAB_STORAGE gives the processes of one experiment a storage directory of their own:
         // the maintenance mode flag (artisan down) and the file cache that queue:restart writes
         // to are then shared by the workers and the commands that signal them.
@@ -117,6 +129,8 @@ final class Lab
                 EventLog::write('debounce.discarded', ['dispatched_at' => $event->command->dispatchedAt, 'forced' => $event->command->delay === 0]);
             }
         });
+
+        $app['events']->listen(AgentFailedOver::class, static fn (AgentFailedOver $event) => EventLog::write('agent.failed_over', ['exception' => $event->exception::class]));
 
         // A worker that pops a job is not paused; these events show which workers were.
         $app['events']->listen(JobPopping::class, static fn () => EventLog::write('job.popping'));
