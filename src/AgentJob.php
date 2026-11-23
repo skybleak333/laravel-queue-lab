@@ -18,12 +18,24 @@ final class AgentJob implements ShouldQueue
 
     public int $tries = 1;
 
+    private ?string $invoiceId = null;
+
+    public function __construct(?string $invoiceId = null)
+    {
+        $this->invoiceId = $invoiceId;
+        if ($invoiceId !== null) {
+            $this->tries = 2;
+        }
+    }
+
     public function handle(): void
     {
-        $agent = new AnonymousAgent('You handle billing. Send invoices when asked.', [], [new SendInvoiceEmail]);
+        EventLog::write('agent.started', ['job_id' => $this->job?->getJobId(), 'attempt' => $this->attempts()]);
+        $agent = new AnonymousAgent('You handle billing. Send invoices when asked.', [], [new SendInvoiceEmail($this->invoiceId)]);
+        $prompt = $this->invoiceId === null ? 'Send the invoice for order 1042.' : "Queue the email for invoice {$this->invoiceId}.";
 
         try {
-            $response = $agent->prompt('Send the invoice for order 1042.', provider: ['primary', 'backup']);
+            $response = $agent->prompt($prompt, provider: ['primary', 'backup']);
         } catch (Throwable $e) {
             EventLog::write('agent.failed', ['exception' => $e::class]);
 

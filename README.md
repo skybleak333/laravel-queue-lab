@@ -15,9 +15,10 @@ And two about Laravel's own queue, on the database driver:
 - **[Debounce with `maxWait` under steady dispatches.](#experiment-4-debounce-with-maxwait-under-steady-dispatches)** On Laravel 13.37 the job that `maxWait` forces to run is discarded as superseded when the next dispatch comes first. With a dispatch every 0.5 s and `maxWait: 6`, the job didn't run once in 60 s.
 - **[`maxExceptions` with a timeout, when the worker isn't killed.](#experiment-5-maxexceptions-and-a-timeout-without-killing-the-worker)** With `Worker::$killOnTimeout = false`, one timeout counts as two exceptions: a job with `maxExceptions = 2` fails after its first timeout.
 
-And one about an AI agent in a queued job:
+And two about AI agents in queued jobs:
 
 - **[An agent's tool after a provider failover.](#experiment-6-an-agents-tool-after-a-provider-failover)** With the Laravel AI SDK 1.4.0, an agent that has run a tool and then gets a 429 from its primary provider starts over on the backup, and the tool runs a second time. The job succeeds, so the queue shows nothing.
+- **[An invoice outbox through a worker crash and failover.](#experiment-7-an-invoice-outbox-through-a-worker-crash-and-failover)** The first worker queues an invoice email and is killed before acknowledging its job. Another worker retries the same job and the AI SDK switches providers. Three tool calls leave one durable email intent in SQLite.
 
 ## Experiment 1: a job that outlives RabbitMQ's acknowledgement timeout
 
@@ -282,9 +283,29 @@ The job succeeds, so the queue and the failed jobs table show nothing, and the r
 - laravel/ai 1.4.0 on Laravel 13, the `groq` driver. The failover is in `Promptable`, so the driver doesn't matter.
 - `stream()`, sub-agents and the SDK's own `->queue()` aren't covered here. The branch's tests also check a sub-agent that ran a tool.
 
+## Experiment 7: an invoice outbox through a worker crash and failover
+
+The job gives `SendInvoiceEmail` an invoice ID from the application. In outbox mode the tool uses that ID as the SQLite primary key and inserts the email intent with `ON CONFLICT (invoice_id) DO NOTHING`. The provider gives each tool call a different ID. The invoice ID stays the same across providers and worker attempts. [Tool source](src/SendInvoiceEmail.php)
+
+1. The first worker reserves the job, calls the tool and commits the outbox row. The fake primary provider holds the next HTTP request so the test can verify that the row is committed and the job is still reserved. The test kills that worker with `SIGKILL`.
+2. After `retry_after`, a new worker picks up the same job ID. The primary calls the tool and returns a 429 on the next step. The backup also calls the tool, then returns the final answer. Both calls find the original invoice intent.
+
+| Worker | Tool calls | Outbox inserts | Result |
+|---|---:|---:|---|
+| First | 1 | 1 | Killed with the job still reserved |
+| Second | 2 | 0 | Completes after provider failover |
+
+The test compares the original and final outbox rows, including their timestamps. A different invoice gets its own row. The experiment measures **one queued email intent**. A delivery worker that sends it to an email API needs its own retry and deduplication policy. [Test](tests/AgentFailoverTest.php) · [Laravel queue retry timing](https://laravel.com/framework/docs/13.x/queues#job-expirations-and-timeouts)
+
+```sh
+vendor/bin/phpunit tests/AgentFailoverTest.php
+```
+
+The test creates the SQLite database and starts both workers and the fake provider on loopback. The messages and invoice IDs are synthetic.
+
 ## Run it
 
-Requirements: PHP 8.3+ with `pcntl`, `sockets` and `pdo_sqlite`, Composer and Docker. Experiments 4, 5 and 6 need no broker: `vendor/bin/phpunit tests/DebounceMaxWaitTest.php tests/MaxExceptionsTimeoutTest.php tests/AgentFailoverTest.php` runs them alone.
+Requirements: PHP 8.3+ with `pcntl`, `sockets` and `pdo_sqlite`, Composer and Docker. Experiments 4–7 need no broker. Run them with `vendor/bin/phpunit tests/DebounceMaxWaitTest.php tests/MaxExceptionsTimeoutTest.php tests/AgentFailoverTest.php`.
 
 ```bash
 docker compose up -d --wait   # RabbitMQ on 127.0.0.1:5672

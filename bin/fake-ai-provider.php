@@ -20,6 +20,11 @@ $counter = $state.'/'.$provider.'.count';
 $n = (int) @file_get_contents($counter) + 1;
 file_put_contents($counter, (string) $n);
 
+$request = json_decode(file_get_contents('php://input'), true, flags: JSON_THROW_ON_ERROR);
+$messages = $request['messages'];
+$lastMessage = $messages[array_key_last($messages)];
+$afterTool = $lastMessage['role'] === 'tool';
+
 $toolCall = [
     'id' => 'chatcmpl-'.$provider.'-'.$n,
     'object' => 'chat.completion',
@@ -46,7 +51,7 @@ $answer = [
     'model' => 'openai/gpt-oss-20b',
     'choices' => [[
         'index' => 0,
-        'message' => ['role' => 'assistant', 'content' => 'The invoice for order 1042 was sent.'],
+        'message' => ['role' => 'assistant', 'content' => $afterTool ? $lastMessage['content'] : 'Done.'],
         'finish_reason' => 'stop',
     ]],
     'usage' => ['prompt_tokens' => 10, 'completion_tokens' => 5],
@@ -54,13 +59,22 @@ $answer = [
 
 header('Content-Type: application/json');
 
-if ($provider === 'primary' && $n >= 2) {
+if ($provider === 'primary' && $afterTool) {
+    $pauseFile = $state.'/pause-primary';
+    if (is_file($pauseFile)) {
+        touch($state.'/primary-waiting');
+        $deadline = microtime(true) + 15;
+        do {
+            usleep(20_000);
+            clearstatcache(true, $pauseFile);
+        } while (is_file($pauseFile) && microtime(true) < $deadline);
+    }
     http_response_code(429);
     echo json_encode(['error' => ['message' => 'Rate limit reached for model openai/gpt-oss-20b.', 'type' => 'tokens', 'code' => 'rate_limit_exceeded']]);
 
     return true;
 }
 
-echo json_encode($n === 1 ? $toolCall : $answer);
+echo json_encode($afterTool ? $answer : $toolCall);
 
 return true;

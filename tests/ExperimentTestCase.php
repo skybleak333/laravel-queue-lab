@@ -90,7 +90,7 @@ abstract class ExperimentTestCase extends TestCase
      */
     protected static function start(array $args, string $log, string $output, array $env = [])
     {
-        $inherited = array_diff_key(getenv(), array_flip(['LAB_HEARTBEAT', 'LAB_IO_TIMEOUT', 'LAB_RPC_TIMEOUT', 'LAB_STORAGE']));
+        $inherited = array_diff_key(getenv(), array_flip(['LAB_HEARTBEAT', 'LAB_IO_TIMEOUT', 'LAB_RPC_TIMEOUT', 'LAB_STORAGE', 'LAB_DATABASE_RETRY_AFTER']));
         $env += ['LAB_STORAGE' => dirname($log).'/storage'];
 
         $process = proc_open(

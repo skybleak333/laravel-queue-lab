@@ -14,6 +14,7 @@ use Throwable;
  * bin/lab artisan <command> ...   run an Artisan command, e.g. artisan queue:work rabbitmq --queue=q
  * bin/lab debounce <seconds> <ms> dispatch DebouncedJob to the database queue every <ms> ms
  * bin/lab max-exceptions <queue>  dispatch MaxExceptionsJob "timeout" and "throw" to the database queue
+ * bin/lab agent-failover <queue> [invoice-id]  use the invoice outbox when an ID is supplied
  */
 final class Cli
 {
@@ -44,7 +45,13 @@ final class Cli
         }
 
         if (($argv[1] ?? '') === 'agent-failover') {
-            AgentJob::dispatch()->onConnection('database')->onQueue($argv[2] ?? 'default');
+            $invoiceId = $argv[3] ?? null;
+            if ($invoiceId !== null && trim($invoiceId) === '') {
+                fwrite(STDERR, "Provide a non-empty invoice ID.\n");
+
+                return 2;
+            }
+            AgentJob::dispatch($invoiceId)->onConnection('database')->onQueue($argv[2] ?? 'default');
 
             return 0;
         }
@@ -96,7 +103,7 @@ final class Cli
                 return $status;
 
             default:
-                fwrite(STDERR, "usage: bin/lab push <queue> <job>... | size <queue> | artisan <command> ... | debounce <seconds> <ms> | max-exceptions <queue> | agent-failover <queue>\n");
+                fwrite(STDERR, "usage: bin/lab push <queue> <job>... | size <queue> | artisan <command> ... | debounce <seconds> <ms> | max-exceptions <queue> | agent-failover <queue> [invoice-id]\n");
 
                 return 2;
         }

@@ -76,7 +76,7 @@ final class Lab
                 'connection' => 'lab',
                 'table' => 'jobs',
                 'queue' => 'default',
-                'retry_after' => 90,
+                'retry_after' => filter_var(getenv('LAB_DATABASE_RETRY_AFTER'), FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]) ?: 90,
                 'after_commit' => false,
             ]);
         }
