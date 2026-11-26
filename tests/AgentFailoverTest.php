@@ -22,7 +22,7 @@ final class AgentFailoverTest extends ExperimentTestCase
         exec('rm -rf '.escapeshellarg($dir.'/storage').' '.escapeshellarg($dir.'/fake').' '.escapeshellarg($dir).'/*.jsonl');
         mkdir($dir.'/fake');
 
-        [$server, $url] = self::fakeProvider($dir.'/fake');
+        [$server, $url] = self::fakeAiProvider($dir.'/fake');
 
         try {
             $env = ['LAB_DATABASE' => self::sqliteQueue($dir), 'LAB_STORAGE' => $dir.'/storage', 'LAB_AI_URL' => $url];
@@ -65,7 +65,7 @@ final class AgentFailoverTest extends ExperimentTestCase
         $workerArgs = ['artisan', 'queue:work', 'database', '--queue=agent', '--timeout=0', '--sleep=1', '--stop-when-empty'];
         touch($state.'/pause-primary');
 
-        [$server, $url] = self::fakeProvider($state);
+        [$server, $url] = self::fakeAiProvider($state);
         $firstWorker = null;
         try {
             $env = [
@@ -145,39 +145,4 @@ final class AgentFailoverTest extends ExperimentTestCase
         }
     }
 
-    /**
-     * Starts `php -S` with the fake provider on a free port.
-     *
-     * @return array{resource, string}
-     */
-    private static function fakeProvider(string $state): array
-    {
-        $socket = stream_socket_server('tcp://127.0.0.1:0');
-        $port = (int) substr((string) stream_socket_get_name($socket, false), strrpos((string) stream_socket_get_name($socket, false), ':') + 1);
-        fclose($socket);
-
-        $server = proc_open(
-            [PHP_BINARY, '-S', "127.0.0.1:{$port}", dirname(__DIR__).'/bin/fake-ai-provider.php'],
-            [0 => ['file', '/dev/null', 'r'], 1 => ['file', $state.'/server.out', 'w'], 2 => ['file', $state.'/server.out', 'a']],
-            $pipes,
-            null,
-            ['LAB_FAKE_STATE' => $state] + getenv(),
-        );
-
-        if (! is_resource($server)) {
-            throw new RuntimeException('Could not start the fake provider');
-        }
-
-        for ($i = 0; $i < 50; $i++) {
-            if ($connection = @fsockopen('127.0.0.1', $port, $errno, $errstr, 0.1)) {
-                fclose($connection);
-
-                return [$server, "http://127.0.0.1:{$port}"];
-            }
-
-            usleep(100_000);
-        }
-
-        throw new RuntimeException('The fake provider did not start');
-    }
 }

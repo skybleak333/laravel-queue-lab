@@ -43,6 +43,51 @@ abstract class ExperimentTestCase extends TestCase
         return $file;
     }
 
+    /** @return array{resource, string} */
+    protected static function fakeAiProvider(string $state): array
+    {
+        return self::serveFixture('bin/fake-ai-provider.php', $state.'/server.out', ['LAB_FAKE_STATE' => $state]);
+    }
+
+    /** @return array{resource, string} */
+    protected static function serveFixture(string $router, string $output, array $env): array
+    {
+        $socket = stream_socket_server('tcp://127.0.0.1:0');
+        if ($socket === false) {
+            throw new RuntimeException("Could not reserve a loopback port for {$router}");
+        }
+        $address = stream_socket_get_name($socket, false);
+        fclose($socket);
+        if ($address === false) {
+            throw new RuntimeException("Could not read the loopback address for {$router}");
+        }
+
+        $root = dirname(__DIR__);
+        $server = proc_open(
+            [PHP_BINARY, '-S', $address, $root.'/'.$router],
+            [0 => ['file', '/dev/null', 'r'], 1 => ['file', $output, 'w'], 2 => ['file', $output, 'a']],
+            $pipes,
+            $root,
+            $env + getenv(),
+        );
+        if (! is_resource($server)) {
+            throw new RuntimeException("Could not start {$router}");
+        }
+
+        for ($attempt = 0; $attempt < 50 && proc_get_status($server)['running']; $attempt++) {
+            if ($connection = @stream_socket_client('tcp://'.$address, timeout: 0.1)) {
+                fclose($connection);
+
+                return [$server, 'http://'.$address];
+            }
+            usleep(100_000);
+        }
+
+        proc_terminate($server);
+        proc_close($server);
+        throw new RuntimeException("{$router} did not start, see {$output}");
+    }
+
     protected static function waitForBroker(): void
     {
         $host = getenv('LAB_AMQP_HOST') ?: '127.0.0.1';

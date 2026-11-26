@@ -15,10 +15,11 @@ And two about Laravel's own queue, on the database driver:
 - **[Debounce with `maxWait` under steady dispatches.](#experiment-4-debounce-with-maxwait-under-steady-dispatches)** On Laravel 13.37 the job that `maxWait` forces to run is discarded as superseded when the next dispatch comes first. With a dispatch every 0.5 s and `maxWait: 6`, the job didn't run once in 60 s.
 - **[`maxExceptions` with a timeout, when the worker isn't killed.](#experiment-5-maxexceptions-and-a-timeout-without-killing-the-worker)** With `Worker::$killOnTimeout = false`, one timeout counts as two exceptions: a job with `maxExceptions = 2` fails after its first timeout.
 
-And two about AI agents in queued jobs:
+And three about AI agents in queued jobs:
 
 - **[An agent's tool after a provider failover.](#experiment-6-an-agents-tool-after-a-provider-failover)** With the Laravel AI SDK 1.4.0, an agent that has run a tool and then gets a 429 from its primary provider starts over on the backup, and the tool runs a second time. The job succeeds, so the queue shows nothing.
 - **[An invoice outbox through a worker crash and failover.](#experiment-7-an-invoice-outbox-through-a-worker-crash-and-failover)** The first worker queues an invoice email and is killed before acknowledging its job. Another worker retries the same job and the AI SDK switches providers. Three tool calls leave one durable email intent in SQLite.
+- **[An invoice email after a lost provider response.](#experiment-8-an-invoice-email-after-a-lost-provider-response)** The email provider accepts the request and closes the connection early. Two HTTP requests with the same idempotency key recover one provider receipt.
 
 ## Experiment 1: a job that outlives RabbitMQ's acknowledgement timeout
 
@@ -295,7 +296,7 @@ The job gives `SendInvoiceEmail` an invoice ID from the application. In outbox m
 | First | 1 | 1 | Killed with the job still reserved |
 | Second | 2 | 0 | Completes after provider failover |
 
-The test compares the original and final outbox rows, including their timestamps. A different invoice gets its own row. The experiment measures **one queued email intent**. A delivery worker that sends it to an email API needs its own retry and deduplication policy. [Test](tests/AgentFailoverTest.php) · [Laravel queue retry timing](https://laravel.com/framework/docs/13.x/queues#job-expirations-and-timeouts)
+The test compares the original and final outbox rows, including their timestamps. A different invoice gets its own row. The experiment measures **one queued email intent**. Experiment 8 follows that intent to the email provider. [Test](tests/AgentFailoverTest.php) · [Laravel queue retry timing](https://laravel.com/framework/docs/13.x/queues#job-expirations-and-timeouts)
 
 ```sh
 vendor/bin/phpunit tests/AgentFailoverTest.php
@@ -303,9 +304,25 @@ vendor/bin/phpunit tests/AgentFailoverTest.php
 
 The test creates the SQLite database and starts both workers and the fake provider on loopback. The messages and invoice IDs are synthetic.
 
+## Experiment 8: an invoice email after a lost provider response
+
+The agent writes the email intent to SQLite. A separate Laravel job sends it to a local HTTP fixture with an `Idempotency-Key` derived from the invoice ID. That key stays the same across worker attempts. The provider tracks accepted messages in its own database and returns the original message ID for a repeated key. This is the client-request-token pattern used by AWS, and email APIs such as Resend expose it through a request header. [AWS Builders' Library](https://aws.amazon.com/builders-library/making-retries-safe-with-idempotent-APIs/) · [Resend idempotency keys](https://resend.com/docs/dashboard/emails/idempotency-keys)
+
+| Worker step | Email provider | Invoice outbox |
+| --- | --- | --- |
+| First delivery | Commits the acceptance and closes the connection before returning the complete receipt | Receipt stays empty. Laravel releases the job for retry. |
+| Retry on another worker | Receives the same key and returns the original message ID | Saves the receipt and removes the completed job from the queue. |
+| Duplicate dispatch after success | Receives no request | Keeps the saved receipt. |
+
+The test observes **two HTTP requests and one accepted message**. It checks the provider's database independently of the outbox. A real integration also needs to respect the provider's key retention period. For example, Resend retains keys for 24 hours. [Test](tests/InvoiceDeliveryTest.php) · [Provider fixture](tests/fixtures/email-provider.php) · [Resend key retention](https://resend.com/docs/dashboard/emails/idempotency-keys#how-it-works)
+
+```bash
+vendor/bin/phpunit tests/InvoiceDeliveryTest.php
+```
+
 ## Run it
 
-Requirements: PHP 8.3+ with `pcntl`, `sockets` and `pdo_sqlite`, Composer and Docker. Experiments 4–7 need no broker. Run them with `vendor/bin/phpunit tests/DebounceMaxWaitTest.php tests/MaxExceptionsTimeoutTest.php tests/AgentFailoverTest.php`.
+Requirements: PHP 8.3+ with `curl`, `pcntl`, `sockets` and `pdo_sqlite`, Composer and Docker. Experiments 4–8 need no broker. Run them with `vendor/bin/phpunit tests/DebounceMaxWaitTest.php tests/MaxExceptionsTimeoutTest.php tests/AgentFailoverTest.php tests/InvoiceDeliveryTest.php`.
 
 ```bash
 docker compose up -d --wait   # RabbitMQ on 127.0.0.1:5672

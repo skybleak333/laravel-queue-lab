@@ -15,6 +15,7 @@ use Throwable;
  * bin/lab debounce <seconds> <ms> dispatch DebouncedJob to the database queue every <ms> ms
  * bin/lab max-exceptions <queue>  dispatch MaxExceptionsJob "timeout" and "throw" to the database queue
  * bin/lab agent-failover <queue> [invoice-id]  use the invoice outbox when an ID is supplied
+ * bin/lab deliver-invoice <queue> <invoice-id>  dispatch the outbox delivery job
  */
 final class Cli
 {
@@ -52,6 +53,17 @@ final class Cli
                 return 2;
             }
             AgentJob::dispatch($invoiceId)->onConnection('database')->onQueue($argv[2] ?? 'default');
+
+            return 0;
+        }
+
+        if (($argv[1] ?? '') === 'deliver-invoice') {
+            if (trim($argv[2] ?? '') === '' || trim($argv[3] ?? '') === '') {
+                fwrite(STDERR, "Provide a queue and an invoice ID.\n");
+
+                return 2;
+            }
+            DeliverInvoiceEmail::dispatch($argv[3])->onConnection('database')->onQueue($argv[2]);
 
             return 0;
         }
@@ -103,7 +115,7 @@ final class Cli
                 return $status;
 
             default:
-                fwrite(STDERR, "usage: bin/lab push <queue> <job>... | size <queue> | artisan <command> ... | debounce <seconds> <ms> | max-exceptions <queue> | agent-failover <queue> [invoice-id]\n");
+                fwrite(STDERR, "usage: bin/lab push <queue> <job>... | size <queue> | artisan <command> ... | debounce <seconds> <ms> | max-exceptions <queue> | agent-failover <queue> [invoice-id] | deliver-invoice <queue> <invoice-id>\n");
 
                 return 2;
         }
